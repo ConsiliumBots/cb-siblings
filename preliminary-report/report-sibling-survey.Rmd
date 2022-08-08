@@ -1,0 +1,92 @@
+---
+title: "Encuesta: Postulación Conjunta de Hermanos"
+author: "Data Team - ConsiliumBots"
+date: "Junio 2022"
+knit: (function(input_file, encoding) {
+    out_dir <- 'docs';
+    rmarkdown::render(input_file,
+      encoding=encoding,
+      output_file=file.path(dirname(input_file), out_dir, 'index.html'))})
+output: html_document
+---
+
+
+### Si pudiera matricular a sus hijos al mismo colegio, ¿cuál sería su primera opción?
+
+La amplia mayoría de los padres prefieren que sus hijos queden en su primera preferencia (85.6%). Cabe notar que existe una aparente preferencia porque el hermano menor quede en su primera preferencia entre los padres que prefieren que sus hijos estén separados. 
+
+
+![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/projects/encuesta-hermanos/figures/q4.png){width=80%}
+
+```{r, echo=FALSE}
+x<-2
+```
+
+
+
+### Entre las siguientes opciones por favor ordene sus preferencias de 1 a 5, donde 1 es más preferida y 5 menos preferida
+
+Más de un 85% de los padres tienen como primera preferencia que sus hijos sean asignados a su primera preferencia. Al igual que en la pregunta anterior, se puede notar una aparente preferencia porque el hermano menor quede en su primera preferencia (y el mayor en la segunda), versus la situación al revés.
+
+![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/projects/encuesta-hermanos/figures/q10.png){width=90%}
+
+### Si ambos estudiantes no son admitidos en la misma escuela, ¿qué tan probable es que termine rechazando la vacante y busque otra alternativa?
+
+
+Un 38.6% de los padres rechazarán la vacante con 100% de probabilidad si ambos hijos no son asignados a la misma escuela, mientras que 31.37% rechazarán la vacante con una probabilidad entre 1-10%
+
+
+![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/projects/encuesta-hermanos/figures/q11.png){width=100%}
+
+
+
+### El 25 de octubre se anuncian los resultados de la asignación del SAE. ¿Qué tan probable cree que es que ... ?
+
+En general, se puede apreciar que los encuestados tienen una confianza media a la asignación de ambos hijos en el mismo establecimiento, donde casi el 40% cree que tiene una probabilidad mayor al 50% de que ambos hijos sean asignados a su primera preferencia. Menos del 30% de los encuestados cree que sus hijos no serán admitidos con un 10% de probabilidad o menos.\
+
+Se observa una mayor confianza en que hijos quedarán juntos, incluso si no es en su primera preferencia. Las probabilidades de asignación percibidas son mayores en el caso de que ambos hijos sean asignados a la segunda preferencia (4.44% tiene una confianza mayor al 50%), en comparación con la asignación a escuelas distintas(0.35% y 1.37% tiene una confianza mayor al 50%).
+
+
+
+![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/projects/encuesta-hermanos/figures/q12.png){width=100%}
+
+
+
+### ¿Sabe que pasa cuando usted marca 'postulación familiar'?
+
+
+![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/projects/encuesta-hermanos/figures/q13.png){width=100%}
+
+
+
+### Por favor, explíqueme con sus propias palabras qué es lo que pasa cuando marca esta opción:
+
+Se clasificaron las respuestas de los que señalaron "Sí" en la pregunta anterior en 6 categorías. El 54.5% de las respuestas reflejan un entendimiento aceptable de la postulación familiar, indicando que esta implica la manifestación de la preferencia a que ambos hijos queden juntos y que puede existir un cambio en el ranking de preferencias en la postulación una vez que uno de los hermanos sea admitido.\
+
+Un 19.5% de las respuestas indican una potencial confusión entre la postulación familiar y la prioridad de hermano, señalando que las probabilidades de asignación aumentan al tener un hermano ya matriculado en el establecimiento, u otro familiar que ahí trabaje.\
+
+El 9.76% de las respuestas entienden la postulación familiar como el mero acto de postular a más de un niño en el sistema, no mencionando las preferencias o la prioridad.\
+
+Un 8.1% señala que entiende la postulación familiar como un proceso en el cuál se le asegura a las familias que ambos hermanos quedarán juntos, donde si un no los hermanos es admitidos, este "arrastra" al otro. Finalmente, un 7.3% declara entender que la postulación familiar implica que si sólo uno de los hermanos es admitido pero no hay cupos para el otro, se desecha la asignación del primero y se deja a ambos hermanos sin matrícula.
+
+![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/projects/encuesta-hermanos/figures/q14.png){width=100%}
+
+
+
+### Imagina el caso hipotético en que tu hijo menor queda asignado/a a la escuela de su primera preferencia, pero tu hijo/a mayor no queda asignado ahí. Imagina también que aceptas esta asignación y matriculas a tus hijo/s en estas distintas escuelas. ¿Con qué probabililidad crees que, si postulas a tu hijo/a mayor el siguiente año a la misma escuela que tu hijo/a menor, tu hijo/a mayor quedará asignado a la misma escuela que tu hijo/a menor?
+
+
+Un 27% declara que postularía al hijo mayor al año siguiente con una probabilidad superior o igual al 91%.
+
+![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/projects/encuesta-hermanos/figures/q15_1.png){width=100%}
+
+
+
+### ¿Le gustaría que el SAE pudiera evaluar las postulaciones de sus hijos/as de manera conjunta?
+
+
+![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/projects/encuesta-hermanos/figures/q15.png){width=100%}
+
+### ¿El apoderado ya había visto sus resultados de la asignación SAE al momento de la encuesta?
+
+![](/Users/antoniaaguilera/ConsiliumBots Dropbox/antoniaaguilera@consiliumbots.com/projects/encuesta-hermanos/figures/q16.png){width=100%}
