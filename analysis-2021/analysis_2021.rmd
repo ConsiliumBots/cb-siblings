@@ -1,0 +1,212 @@
+---
+title: "Postulación Conjunta - SAE 2021"
+author: "Antonia Aguilera - Data Team ConsiliumBots "
+date: "Agosto 2022"
+output: html_document
+---
+<style>
+body {
+text-align: justify}
+</style>
+
+```{r, setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.align = 'center')
+knitr::opts_knit$set(root.dir = '/Users/antoniaaguilera/ConsiliumBots Dropbox/ConsiliumBots/Projects/Chile/Siblings/')
+```
+
+## Estadísticas Generales
+
+```{r cars}
+library(tidyverse)
+library(dplyr)
+library(kableExtra)
+
+data_reg <- read_delim('data/inputs/analysis-2021/SAE_2021/F1_Relaciones_entre_postulantes_etapa_regular_2021_Admisión_2022_PUBL.csv')
+data_comp <- read_delim('data/inputs/analysis-2021/SAE_2021/F2_Relaciones_entre_postulantes_etapa_complementaria_2021_Admisión_2022_PUBL.csv')
+
+aux_reg  <- data_reg %>% group_by(mrun_1) %>%tally()
+aux_comp <- data_comp %>% group_by(mrun_1) %>%tally()
+
+mean_reg  <- mean(aux_reg$n)
+mean_comp <- mean(aux_comp$n)
+mean_tot  <- as.numeric((sum(aux_reg[,'n'])+sum(aux_comp[,'n']))/(count(aux_reg)+count(aux_comp)))
+
+variable <- c('Relaciones Totales', 'Hermanos Mayores', 'Hermanos Menores', 'Mismo Nivel', 'Postulación en Bloque', 'Hermanos Promedio')
+regular <- c(format(as.numeric(count(data_reg)) , big.mark=","), 
+             format(as.numeric(length(unique(data_reg$mrun_1))) , big.mark=","),
+             format(as.numeric(length(unique(data_reg$mrun_2))) , big.mark=","), 
+             format(sum(data_reg[,'mismo_nivel']) , big.mark=","), 
+             format(sum(data_reg[,'postula_en_bloque']) , big.mark=","),
+             format(mean_reg , digits=3, big.mark=",")
+             )
+comp <- c(format(as.numeric(count(data_comp)) , big.mark=","), 
+             format(as.numeric(length(unique(data_comp$mrun_1))) , big.mark=","),
+             format(as.numeric(length(unique(data_comp$mrun_2))) , big.mark=","), 
+             format(sum(data_comp[,'mismo_nivel']) , big.mark=","), 
+             format(sum(data_comp[,'postula_en_bloque']) , big.mark=","),
+             format(mean_comp , digits=3, big.mark=",")
+             )
+total <- c(format(as.numeric(count(data_reg)) + as.numeric(count(data_comp)) , big.mark=","), 
+             format(as.numeric(length(unique(data_reg$mrun_1)))+as.numeric(length(unique(data_comp$mrun_1))) , big.mark=","),
+             format(as.numeric(length(unique(data_reg$mrun_2)))+as.numeric(length(unique(data_comp$mrun_2))) , big.mark=","), 
+             format(sum(data_reg[,'postula_en_bloque']) + sum(data_comp[,'mismo_nivel']) , big.mark=","), 
+             format(sum(data_reg[,'postula_en_bloque']) + sum(data_comp[,'postula_en_bloque']) , big.mark=","),
+             format(mean_tot , digits=3, big.mark=",")
+             )
+tabla1 <- data.frame(variable, regular, comp, total)
+colnames(tabla1) <- c('', 'Regular', 'Complementaria', 'Total')
+  
+kbl(tabla1) %>%
+kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F, position = "float_right") %>% row_spec(1:6, align = 'c')
+```
+Considerando ambos procesos (regular y complementario), se analizaron más 84 mil relaciones de hermanos o hermanas que postularon al Sistema de Admisión Escolar el año 2021, de los cuáles el `r format(sum(data_reg[,'mismo_nivel'])/as.numeric(count(data_reg))*100, digits=3, bigmark=",")`%  y el `r format(sum(data_comp[,'mismo_nivel'])/as.numeric(count(data_comp))*100, digits=3, bigmark=",")`% postulan al mismo nivel en las etapas regular y complementaria, respectivamente.
+
+Con respecto a la postulación en bloque, se aprecia que el `r format(sum(data_reg[,'postula_en_bloque'])/as.numeric(count(data_reg))*100, digits=3, bigmark=",")`% de las postulaciones de hermanos en etapa regular y el `r format(sum(data_comp[,'postula_en_bloque'])/as.numeric(count(data_comp))*100, digits=3, bigmark=",")`% en etapa complementaria son realizadas en esta modalidad.
+
+De las 68,641 relaciones de hermanos existentes en la etapa regular, 2,712 (`r format(as.numeric(2712/68641*100), digits=3, bigmark=",")`%) también están presentes en la etapa complementaria. El `r format(as.numeric(64.2), digits=3, bigmark=",")`% de las parejas de hermanos que están presentes en ambas etapas realizaron postulación en bloque.
+
+
+
+Finalmente, la siguiente tabla muestra las diferencias en observables de los estudiantes que realizaron postulación en bloque de los que no. Se puede apreciar que en ambas etapas, un menor porcentaje de las postulaciones en bloque son para estudiantes en el mismo nivel, en comparación con las postulaciones que no se realizan en bloque.
+```{r}
+library(readxl)
+
+comparacion <- read_excel('data/outputs/analysis-2021/comparacion_bloque.xlsx')
+
+aux <- c("Si", "No", "Si", "No")
+etapa <- c("Regular", "Regular", "Complementaria", "Complementaria")
+
+tabla3 <- data.frame(etapa,aux, format(comparacion$prioritario*100, digits=3, bigmark=','), format(comparacion$mismo_nivel*100, digits=3, bigmark=','), format(comparacion$n_hermanos, digits=3, bigmark=','), format(comparacion$hermano_mayor*100, digits=3, bigmark=','), format(comparacion$hermano_menor*100, digits=3, bigmark=',') )
+
+colnames(tabla3) <- c('Etapa', '¿En Bloque?', 'Prioritario (%)', 'Mismo Nivel (%)', 'Nº Hermanos', 'Hermano Mayor (%)', 'Hermano Menor (%)')
+  
+kbl(tabla3) %>%
+kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F, position = "center") %>% row_spec(1:4,align='c')
+
+```
+
+### Trayectorias
+
+```{r}
+library(readxl)
+
+forsankey<-read_excel('data/outputs/analysis-2021/trayectorias.xlsx')
+
+```
+
+De los `r format(as.numeric(sum(forsankey[,'frecuencia'])), bigmark=",")` postulantes que participaron en el SAE 2021, `r format(as.numeric(sum(forsankey[1:9,'frecuencia'])), bigmark=",")` participaron en ambas etapas (regular y complementaria). La siguiente figura muestra las trayectorias de este último grupo, considerando las postulaciones de sus hermanos y las postulaciones en bloque. 
+
+
+```{r}
+library(networkD3)
+library(dplyr)
+
+links <- data.frame(
+  source =  c("Individual", "Individual", "Individual", "Hermanos sin bloque", "Hermanos sin bloque", "Hermanos sin bloque", "Postulación en bloque", "Postulación en bloque", "Postulación en bloque") , 
+  target =  c("Individual ", "Hermanos sin bloque ", "Postulación en bloque ", "Individual ", "Hermanos sin bloque ", "Postulación en bloque ", "Individual ", "Hermanos sin bloque ", "Postulación en bloque ") , 
+  value  =  c(24642, 432, 191, 2332, 403, 262, 2405, 1281, 2776)
+  )
+
+# From these flows we need to create a node data frame: it lists every entities involved in the flow
+nodes <- data.frame(
+  name = c(as.character(links$source), 
+  as.character(links$target)) %>% unique() )
+
+# With networkD3, connection must be provided using id, not using real name like in the links dataframe.. So we need to reformat it.
+links$IDsource <- match(links$source, nodes$name)-1 
+links$IDtarget <- match(links$target, nodes$name)-1
+
+# Make the Network
+p <- sankeyNetwork(Links = links, Nodes = nodes,
+              Source = "IDsource", Target = "IDtarget",
+              Value = "value", NodeID = "name", 
+              sinksRight=FALSE)
+p
+```
+
+Para el grupo de estudiantes que postula en ambas etapas,
+de los `r format(as.numeric(forsankey$n_inicio[1]), bigmark=",")` estudiantes que realizan una postulación individual en etapa regular, el `r format(as.numeric(forsankey$frecuencia[1]/forsankey$n_inicio[1])*100, digits=3, bigmark=",")`% también postula de forma individual en etapa complementaria, el `r format(as.numeric(forsankey$frecuencia[2]/forsankey$n_inicio[1])*100, digits=3, bigmark=",")`% realiza una postulación declarando hermanos en etapa complementaria (sin realizar postulación en bloque), y el `r format(as.numeric(forsankey$frecuencia[3]/forsankey$n_inicio[1])*100, digits=3, bigmark=",")`% restante también declara hermanos en etapa complementaria y opta por la postulación en bloque. 
+
+Con respecto a quienes postulan declarando hermanos en la etapa regular (y que también postulan en etapa complementaria), el `r format(as.numeric(forsankey$frecuencia[4]/forsankey$n_inicio[4])*100, digits=3, bigmark=",")`% realiza una postulación individual en etapa complementaria; el `r format(as.numeric(forsankey$frecuencia[5]/forsankey$n_inicio[4])*100, digits=3, bigmark=",")`% mantiene su postulación con hermanos sin optar por la postulación en bloque, y el 
+`r format(as.numeric(forsankey$frecuencia[6]/forsankey$n_inicio[4])*100, digits=3, bigmark=",")`% restante opta por la postulación en bloque en etapa complementaria.
+
+Finalmente, de los `r format(as.numeric(forsankey$n_inicio[7]), bigmark=",")` estudiantes que optan por la postulación en bloque, un 
+`r format(as.numeric(forsankey$frecuencia[9]/forsankey$n_inicio[7])*100, digits=3, bigmark=",")`% mantiene esa postulación; un `r format(as.numeric(forsankey$frecuencia[8]/forsankey$n_inicio[7])*100, digits=3, bigmark=",")`% no vuelve a utilizar la postulación en bloque en etapa complementaria y un `r format(as.numeric(forsankey$frecuencia[7]/forsankey$n_inicio[7])*100, digits=3, bigmark=",")`% pasa a postular de forma individual.
+
+
+```{r, fig.align='center'}
+library(networkD3)
+library(dplyr)
+
+links <- data.frame(
+  source =  c("Hermanos sin bloque", "Hermanos sin bloque", "Hermanos sin bloque", "Postulación en bloque", "Postulación en bloque", "Postulación en bloque") , 
+  target =  c("Individual ", "Hermanos sin bloque ", "Postulación en bloque ", "Individual ", "Hermanos sin bloque ", "Postulación en bloque ") , 
+  value  =  c(2332, 403, 262, 2405, 1281, 2776)
+  )
+
+# From these flows we need to create a node data frame: it lists every entities involved in the flow
+nodes <- data.frame(
+  name = c(as.character(links$source), 
+  as.character(links$target)) %>% unique() )
+
+# With networkD3, connection must be provided using id, not using real name like in the links dataframe.. So we need to reformat it.
+links$IDsource <- match(links$source, nodes$name)-1 
+links$IDtarget <- match(links$target, nodes$name)-1
+
+# Make the Network
+p_2 <- sankeyNetwork(Links = links, Nodes = nodes,
+              Source = "IDsource", Target = "IDtarget",
+              Value = "value", NodeID = "name", 
+              sinksRight=FALSE)
+p_2
+```
+
+## Largo de las postulaciones
+La siguiente tabla muestra el largo de las postulaciones para los estudiantes que postulan junto con algún hermano o hermana. Se puede apreciar que las postulaciones son, en promedio, más largas cuando se opta por realizar la postulación en bloque. Esto se cumple tanto para los hermanos que postulan al mismo nivel, como para los que no. También se puede apreciar que los hermanos menores tienden a tener postulaciones más cortas que sus hermanos mayores, ya sea postulen o no en bloque.
+
+```{r}
+library(readxl)
+library(dplyr)
+library(kableExtra)
+
+rankings<-read_excel('data/outputs/analysis-2021/rankings.xlsx')
+tabla2<- data.frame(format(rankings$cat,digits=3,nsmall = 0), format(rankings$largo_sinbloque,digits=3,nsmall = 0), format(rankings$largo_conbloque,digits=3,nsmall = 0))
+colnames(tabla2) <- c('Tipo Postulante', 'No postula en Bloque', 'Postula en Bloque') 
+
+kbl(tabla2) %>%
+kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F) %>% 
+  row_spec(1:4,align='c')
+
+```
+
+## Asignación de hermanos
+```{r}
+library(readxl)
+asignaciones<-read_excel('data/outputs/analysis-2021/asignaciones.xlsx')
+
+```
+Con respecto a la asignación, de los más de 94mil hermanos asignados a un establecimiento en etapa regular el `r format(as.numeric(asignaciones$si_en_bloque[2]), digits=3)`% optó por la postulación en bloque, mientras que este porcentaje alcanza el `r format(as.numeric(asignaciones$si_en_bloque[1]), digits=3)`% para los asignados en etapa complementaria.
+```{r}
+library(dplyr)
+library(kableExtra)
+
+
+tabla4<- data.frame(asignaciones$situacion_final, 
+                    format(asignaciones$no_en_bloque,digits=3,nsmall = 0),
+                    format(asignaciones$si_en_bloque,digits=3,nsmall = 0),
+                    format(asignaciones$total, bigmark=",",nsmall = 0))
+colnames(tabla4) <- c('Situación Final', 'No postula en Bloque (%)', 'Postula en Bloque (%)', 'Total') 
+
+kbl(tabla4) %>%
+kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F) %>% 
+  row_spec(1:5,align='c')
+
+```
+
+
+## Datos 
+La información aquí presentada proviene de las bases públicas F1 y F2 del Sistema de Admisión Escolar, disponibles en la página de [Datos Abiertos MINEDUC](https://datosabiertos.mineduc.cl/sistema-de-admision-escolar-sae/).
+
+
+
+
