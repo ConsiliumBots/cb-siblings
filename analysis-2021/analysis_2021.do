@@ -4,7 +4,11 @@
 // ---------------------------------------------- //
 // ---------------------------------------------- //
 
-global main "/Users/antoniaaguilera/ConsiliumBots Dropbox/ConsiliumBots/Projects/Chile/Siblings"
+if "`c(username)'"=="javieragazmuri" { // Javiera
+	global main =  "/Users/javieragazmuri/ConsiliumBots Dropbox/ConsiliumBots/Projects/Chile/Siblings"
+	global pathGit = "/Users/javieragazmuri/Documents/GitHub/cb-siblings"
+  }
+
 global pathData "$main/data"
 
 // --------------------------------------------- //
@@ -406,3 +410,385 @@ replace no_en_bloque = no_en_bloque/total*100
 replace si_en_bloque = si_en_bloque/total*100
 
 export excel "$pathData/outputs/analysis-2021/asignaciones.xlsx", replace first (variables)
+
+// ----------------------------------------------------- //
+// ---------------------------------------------------- //
+// --------------------------------------------------- //
+// ----------------- ANÁLISIS JAVI ------------------ //
+// ------------------------------------------------- //
+// ------------------------------------------------ //
+// ----------------------------------------------- //
+
+
+// ------------------------------------------------ //
+// -------------- 1. POSTULACIONES --------------- //
+// ---------------------------------------------- //
+
+// ------ ETAPA REGULAR ------ //
+
+import delimited "$pathData/inputs/analysis-2021/SAE_2021/D1_Resultados_etapa_regular_2021_Admisión_2022_PUBL.csv", clear
+tempfile asig_reg
+save  `asig_reg', replace
+
+import delimited "$pathData/inputs/analysis-2021/SAE_2021/C1_Postulaciones_etapa_regular_2021_Admisión_2022_PUBL.csv", clear 
+tempfile postulaciones_reg
+save  `postulaciones_reg', replace
+
+import delimited "$pathData/inputs/analysis-2021/SAE_2021/F1_Relaciones_entre_postulantes_etapa_regular_2021_Admisión_2022_PUBL.csv", clear
+duplicates report mrun_1 mrun_2
+gen relacion = _n
+tempfile relaciones_reg
+save  `relaciones_reg', replace
+
+// ------ Análisis a nivel de relación ------ //
+
+count if mismo_nivel==0 & postula_en_bloque==1
+
+use `postulaciones_reg', clear
+
+bys mrun: egen cant_postulaciones = max(preferencia_postulante)
+
+keep if preferencia_postulante<6
+keep rbd mrun preferencia_postulante cant_postulaciones
+
+reshape wide rbd , i(mrun) j(preferencia_postulante)
+tempfile aux_preferencias
+save  `aux_preferencias', replace
+
+foreach x in mrun rbd* cant_postulaciones {
+	rename `x' `x'_1
+}
+
+merge 1:m mrun_1 using `relaciones_reg'
+drop if _merge==1
+drop _merge
+rename mrun_2 mrun
+gen id_relacion = _n
+merge m:m mrun using `postulaciones_reg'
+drop if _merge == 2
+drop _merge
+
+bys id_relacion: gen aux = _n
+
+foreach x in 1 2 3 4 5 {
+	gen esta_`x' = 0
+	replace esta_`x' = 1 if rbd`x'_1 == rbd
+	bys mrun: ereplace esta_`x'=max(esta_`x')
+	replace esta_`x' = . if rbd`x'_1 == .
+}
+tab esta_1 if aux ==1 & mismo_nivel==0 & postula_en_bloque==1
+tab esta_1 if aux ==1 & mismo_nivel==0 & postula_en_bloque==0
+
+// ------ Análisis a nivel de estudiante ------ //
+
+use  `relaciones_reg', clear
+
+reshape long mrun_@ , i(relacion) j(aux)
+
+gen hermano_mayor = (aux == 1)
+gen hermano_menor = (aux == 2)
+
+bys relacion: egen double mrun_hermano_men = max(mrun_)
+bys relacion: egen double mrun_hermano_may = min(mrun_)
+
+gen double mrun_hermano = mrun_hermano_men if hermano_mayor ==1 
+replace mrun_hermano = mrun_hermano_may if hermano_menor ==1
+replace mrun_hermano = . if mrun_hermano == mrun_
+replace mrun_hermano = mrun_hermano_men if hermano_menor ==1 & mrun_hermano == .
+replace mrun_hermano = mrun_hermano_may if hermano_mayor ==1 & mrun_hermano == .
+
+count if mrun_ == mrun_hermano // es 0
+drop mrun_hermano_may mrun_hermano_men
+
+* 506 relación
+bys mrun_: egen n_relaciones = count(relacion)
+
+rename mrun_ mrun
+sort relacion mrun
+order mrun
+
+* Me quedo con el mrun_hermano solo para quienes tienen un hermano: análisis.
+replace mrun_hermano = . if n_relaciones != 1
+
+collapse (max) mismo_nivel postula_en_bloque hermano_* n_relaciones (firstnm) mrun_hermano, by (mrun)
+* Ojo: hay estudiantes que son hermano_mayor == 1 & hermano_menor == 1
+rename n_relaciones n_hermanos
+order n_hermanos
+
+count if mismo_nivel==0 & postula_en_bloque==1 & n_hermanos==1
+
+tempfile hermanos_reg
+save  `hermanos_reg', replace
+
+
+// ----------------------------------------------------------- //
+// -------------- 2. ASIGNACIONES Y RESPUESTA --------------- //
+// --------------------------------------------------------- //
+
+// ------ ETAPA REGULAR ------ //
+
+// ------ Análisis a nivel de relación ------ //
+
+use `relaciones_reg', clear
+
+rename mrun_1 mrun
+merge m:1 mrun using `asig_reg'
+drop if _merge == 2
+drop _merge
+
+destring rbd_admitido rbd_admitido_post_resp, replace
+
+gen rbd_final = rbd_admitido
+replace rbd_final = rbd_admitido_post_resp if respuesta_postulante == 2 | respuesta_postulante == 6
+
+destring respuesta_postulante_post_lista_, replace
+gen respuesta_final = respuesta_postulante_post_lista_
+replace respuesta_final = respuesta_postulante if respuesta_postulante == 1 |  respuesta_postulante == 3  |  respuesta_postulante == 5
+
+drop rbd_admitido rbd_admitido_post_resp respuesta_postulante_post_lista_ respuesta_postulante cod_curso_admitido cod_curso_admitido_post_resp
+rename (rbd_final respuesta_final mrun)(rbd_final_1 respuesta_final_1 mrun_1)
+
+rename mrun_2 mrun
+merge m:1 mrun using `asig_reg'
+drop if _merge == 2
+drop _merge
+
+destring rbd_admitido rbd_admitido_post_resp, replace
+
+gen rbd_final = rbd_admitido
+replace rbd_final = rbd_admitido_post_resp if respuesta_postulante == 2 | respuesta_postulante == 6
+
+destring respuesta_postulante_post_lista_, replace
+gen respuesta_final = respuesta_postulante_post_lista_
+replace respuesta_final = respuesta_postulante if respuesta_postulante == 1 |  respuesta_postulante == 3  |  respuesta_postulante == 5
+
+drop rbd_admitido rbd_admitido_post_resp respuesta_postulante_post_lista_ respuesta_postulante cod_curso_admitido cod_curso_admitido_post_resp
+rename (rbd_final respuesta_final mrun)(rbd_final_2 respuesta_final_2 mrun_2)
+
+count if mismo_nivel==0 & postula_en_bloque==1
+count if rbd_final_1!=. & rbd_final_2!=. & mismo_nivel==0 & postula_en_bloque==1
+count if rbd_final_1==. & rbd_final_2==. & mismo_nivel==0 & postula_en_bloque==1
+count if ((rbd_final_1==. & rbd_final_2!=.) | (rbd_final_1!=. & rbd_final_2==.)) & mismo_nivel==0 & postula_en_bloque==1
+
+gen asignado_igual = 0 
+replace asignado_igual = 1 if rbd_final_1 == rbd_final_2
+replace asignado_igual = . if rbd_final_1 == . | rbd_final_2 == .
+
+tab asignado_igual if mismo_nivel==0 & postula_en_bloque==1
+tab asignado_igual if mismo_nivel==0 & postula_en_bloque==0
+
+tab respuesta_final_1 respuesta_final_2 if asignado_igual==1 & mismo_nivel==0 & postula_en_bloque==1
+tab respuesta_final_1 respuesta_final_2 if asignado_igual==0 & mismo_nivel==0 & postula_en_bloque==1
+tab respuesta_final_1 respuesta_final_2 if asignado_igual==1 & mismo_nivel==0 & postula_en_bloque==0
+tab respuesta_final_1 respuesta_final_2 if asignado_igual==0 & mismo_nivel==0 & postula_en_bloque==0
+
+* Simulaciones: por python, análisis por acá
+
+import delimited "$pathData/inputs/analysis-2021/SAE_2021/Simulaciones/results_false_true.csv", clear
+keep applicant_id institution_id
+gen double mrun_2 = applicant_id
+rename applicant_id mrun_1
+tempfile simulacion
+save  `simulacion', replace
+
+use  `relaciones_reg', replace
+rename mrun_2 mrun_2_orig
+merge m:1 mrun_1 using `simulacion'
+drop mrun_2
+rename institution_id rbd_1
+rename mrun_2_orig mrun_2
+drop if _merge == 2
+drop _merge 
+
+rename mrun_1 mrun_1_orig
+merge m:1 mrun_2 using `simulacion'
+drop mrun_1
+rename institution_id rbd_2
+rename mrun_1_orig mrun_1
+drop if _merge == 2
+drop _merge 
+
+gen ambos_asignados = 0
+replace ambos_asignados = 1 if rbd_1 != . & rbd_2 != .
+
+gen asignado_igual = 0  if ambos_asignados == 1
+replace asignado_igual = 1 if rbd_1 == rbd_2 & ambos_asignados == 1
+
+tab ambos_asignados if mismo_nivel == 0
+tab asignado_igual if mismo_nivel == 0
+
+// ------ Análisis a nivel de estudiante ------ //
+
+use `asig_reg', clear
+destring rbd_admitido cod_curso_admitido rbd_admitido_post_resp cod_curso_admitido_post_resp respuesta_postulante_post_lista_, replace
+gen rbd_final = rbd_admitido
+replace rbd_final = rbd_admitido_post_resp if respuesta_postulante == 2 | respuesta_postulante == 6
+
+gen double cod_curso_final = cod_curso_admitido
+replace cod_curso_final = cod_curso_admitido_post_resp if respuesta_postulante == 2 | respuesta_postulante == 6
+
+gen respuesta_final = respuesta_postulante_post_lista_
+replace respuesta_final = respuesta_postulante if respuesta_postulante == 1 |  respuesta_postulante == 3  |  respuesta_postulante == 5
+
+rename (rbd_final cod_curso_final) (rbd cod_curso)
+merge 1:1 mrun rbd cod_curso using `postulaciones_reg'
+tab respuesta_final if _merge == 1 // Los _merge == 1 son aquellos no asignados (respuesta_final = 6)
+drop if _merge == 2
+drop _merge
+rename (rbd cod_curso)(rbd_final cod_curso_final)
+
+tempfile asig_post_reg
+save  `asig_post_reg', replace
+
+import delimited "$pathData/inputs/analysis-2021/SAE_2021/B1_Postulantes_etapa_regular_2021_Admisión_2022_PUBL.csv", clear 
+merge 1:1 mrun using  `hermanos_reg'
+*No hay _merge == 2.
+drop _merge
+replace n_hermanos = 0 if n_hermanos == .
+
+merge 1:1 mrun using  `asig_post_reg'
+*Solo _merge == 3.
+drop _merge
+gen id_base = _n
+
+preserve
+keep if mrun_hermano!=.
+keep mrun_hermano id_base
+rename mrun_hermano mrun
+merge m:1 mrun using  `asig_post_reg'
+drop if _merge ==2 
+drop _merge
+keep mrun id_base rbd_final respuesta_final preferencia_postulante
+foreach x in mrun rbd_final respuesta_final preferencia_postulante {
+	rename `x' `x'_hermano
+}
+tempfile asig_hermano
+save  `asig_hermano', replace
+restore
+
+merge 1:1 id_base mrun_hermano using  `asig_hermano'
+drop _merge
+
+count if n_hermanos == 0
+count if n_hermanos == 1 & postula_en_bloque == 1 & mismo_nivel == 0
+count if n_hermanos == 1 & postula_en_bloque == 0 & mismo_nivel == 0
+
+count if n_hermanos == 0 & rbd_final != . 
+count if n_hermanos == 1 & postula_en_bloque == 1 & mismo_nivel == 0 & rbd_final != .
+count if n_hermanos == 1 & postula_en_bloque == 0 & mismo_nivel == 0 & rbd_final != .
+
+tab respuesta_final if n_hermanos == 0 & rbd_final != . 
+tab respuesta_final if n_hermanos == 1 & postula_en_bloque == 1 & mismo_nivel == 0 & rbd_final != .
+tab respuesta_final if n_hermanos == 1 & postula_en_bloque == 0 & mismo_nivel == 0 & rbd_final != .
+
+tab preferencia_postulante if n_hermanos == 0 & rbd_final != .
+tab preferencia_postulante if n_hermanos == 1 & mismo_nivel == 0 & postula_en_bloque == 1 & rbd_final == rbd_final_hermano
+tab preferencia_postulante if n_hermanos == 1 & mismo_nivel == 0 & postula_en_bloque == 1 & rbd_final != rbd_final_hermano
+
+tab preferencia_postulante if n_hermanos == 1 & mismo_nivel == 0 & postula_en_bloque == 0 & rbd_final == rbd_final_hermano
+tab preferencia_postulante if n_hermanos == 1 & mismo_nivel == 0 & postula_en_bloque == 0 & rbd_final != rbd_final_hermano
+
+tab respuesta_final if n_hermanos == 0 & rbd_final != . & preferencia_postulante == 1
+tab respuesta_final if n_hermanos == 1 & mismo_nivel == 0 & postula_en_bloque == 1 & rbd_final == rbd_final_hermano & preferencia_postulante == 1 & rbd_final != .
+tab respuesta_final if n_hermanos == 1 & mismo_nivel == 0 & postula_en_bloque == 1 & rbd_final != rbd_final_hermano & preferencia_postulante == 1 & rbd_final != .
+tab respuesta_final if n_hermanos == 1 & mismo_nivel == 0 & postula_en_bloque == 0 & rbd_final == rbd_final_hermano & preferencia_postulante == 1 & rbd_final != .
+tab respuesta_final if n_hermanos == 1 & mismo_nivel == 0 & postula_en_bloque == 0 & rbd_final != rbd_final_hermano & preferencia_postulante == 1 & rbd_final != .
+
+tempfile etapa_reg_estudiantes
+save  `etapa_reg_estudiantes', replace
+
+
+// ------ ETAPA COMPLEMENTARIA ------ //
+
+import delimited "$pathData/inputs/analysis-2021/SAE_2021/D2_Resultados_etapa_complementaria_2021_Admisión_2022_PUBL.csv", clear
+tempfile asig_comp
+save  `asig_comp', replace
+
+import delimited "$pathData/inputs/analysis-2021/SAE_2021/C2_Postulaciones_etapa_complementaria_2021_Admisión_2022_PUBL.csv", clear 
+tempfile postulaciones_comp
+save  `postulaciones_comp', replace
+
+import delimited "$pathData/inputs/analysis-2021/SAE_2021/F2_Relaciones_entre_postulantes_etapa_complementaria_2021_Admisión_2022_PUBL.csv", clear
+
+duplicates report mrun_1 mrun_2
+bys mrun_1: egen n_hermanos = count(mrun_2)
+
+gen relacion = _n
+
+reshape long mrun_@ , i(relacion) j(aux)
+
+gen hermano_mayor = (aux == 1)
+gen hermano_menor = (aux == 2)
+
+bys mrun_: egen n_relaciones = count(relacion)
+
+sort relacion mrun
+rename mrun_ mrun
+order mrun
+
+collapse (firstnm) mismo_nivel* postula_en_bloque* n_hermanos (max) hermano_* n_relaciones, by (mrun)
+* Ojo: hay estudiantes que son hermano_mayor == 1 & hermano_menor == 1
+order n_hermanos
+
+tempfile hermanos_comp
+save  `hermanos_comp', replace
+
+import delimited "$pathData/inputs/analysis-2021/SAE_2021/B2_Postulantes_etapa_complementaria_2021_Admisión_2022_PUBL.csv", clear 
+merge 1:1 mrun using  `hermanos_comp'
+*No hay _merge == 2.
+drop _merge
+replace n_hermanos = 0 if n_hermanos == .
+
+merge 1:1 mrun using  `asig_comp'
+*Solo _merge == 3.
+drop _merge
+
+destring rbd_admitido cod_curso_admitido, replace
+rename (rbd_admitido cod_curso_admitido) (rbd cod_curso)
+merge 1:1 mrun rbd cod_curso using `postulaciones_comp'
+
+drop if _merge == 2
+drop _merge
+
+rename (rbd cod_curso)(rbd_admitido cod_curso_admitido)
+
+count if n_hermanos == 0
+count if n_hermanos > 0 & postula_en_bloque == 0
+count if n_hermanos > 0 & postula_en_bloque == 1
+
+count if n_hermanos == 0 & rbd_admitido !=.
+count if n_hermanos > 0 & postula_en_bloque == 0 & rbd_admitido !=.
+count if n_hermanos > 0 & postula_en_bloque == 1 & rbd_admitido !=.
+
+tab preferencia_postulante if n_hermanos == 0 & rbd_admitido !=.
+tab preferencia_postulante if n_hermanos > 0 & postula_en_bloque == 0 & rbd_admitido !=.
+tab preferencia_postulante if n_hermanos > 0 & postula_en_bloque == 1 & rbd_admitido !=.
+
+tempfile etapa_complementaria
+save  `etapa_complementaria', replace
+
+// ------------------------------------------------- //
+// ----------------- MATRÍCULA  ------------------- //
+// ----------------------------------------------- //
+
+import delimited "$pathData/inputs/analysis-2021/Matrícula 2022/20220908_Matrícula_unica_2022_20220430_WEB.CSV", clear 
+keep mrun rbd
+rename rbd rbd_matriculado
+tempfile matricula
+save  `matricula', replace
+
+use `etapa_reg_estudiantes'
+merge 1:1 mrun using `matricula'
+drop if _merge == 2 
+
+count if _merge == 3 & n_hermanos == 0 & rbd_final != . 
+count if _merge == 3 & n_hermanos == 1 & postula_en_bloque == 1 & mismo_nivel == 0 & rbd_final != . & rbd_final == rbd_final_hermano
+count if _merge == 3 & n_hermanos == 1 & postula_en_bloque == 1 & mismo_nivel == 0 & rbd_final != . & rbd_final != rbd_final_hermano
+count if _merge == 3 & n_hermanos == 1 & postula_en_bloque == 0 & mismo_nivel == 0 & rbd_final != . & rbd_final == rbd_final_hermano
+count if _merge == 3 & n_hermanos == 1 & postula_en_bloque == 0 & mismo_nivel == 0 & rbd_final != . & rbd_final != rbd_final_hermano
+
+count if _merge == 3 & n_hermanos == 0 & rbd_final != . & rbd_matriculado == rbd_final
+count if _merge == 3 & n_hermanos == 1 & postula_en_bloque == 1 & mismo_nivel == 0 & rbd_final != . & rbd_final == rbd_final_hermano & rbd_matriculado == rbd_final
+count if _merge == 3 & n_hermanos == 1 & postula_en_bloque == 1 & mismo_nivel == 0 & rbd_final != . & rbd_final != rbd_final_hermano & rbd_matriculado == rbd_final
+count if _merge == 3 & n_hermanos == 1 & postula_en_bloque == 0 & mismo_nivel == 0 & rbd_final != . & rbd_final == rbd_final_hermano & rbd_matriculado == rbd_final
+count if _merge == 3 & n_hermanos == 1 & postula_en_bloque == 0 & mismo_nivel == 0 & rbd_final != . & rbd_final != rbd_final_hermano & rbd_matriculado == rbd_final
