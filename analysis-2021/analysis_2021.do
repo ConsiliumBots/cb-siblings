@@ -582,40 +582,6 @@ tab respuesta_final_1 respuesta_final_2 if asignado_igual==0 & mismo_nivel==0 & 
 tab respuesta_final_1 respuesta_final_2 if asignado_igual==1 & mismo_nivel==0 & postula_en_bloque==0
 tab respuesta_final_1 respuesta_final_2 if asignado_igual==0 & mismo_nivel==0 & postula_en_bloque==0
 
-* Simulaciones: por python, análisis por acá
-
-import delimited "$pathData/inputs/analysis-2021/SAE_2021/Simulaciones/results_false_true.csv", clear
-keep applicant_id institution_id
-gen double mrun_2 = applicant_id
-rename applicant_id mrun_1
-tempfile simulacion
-save  `simulacion', replace
-
-use  `relaciones_reg', replace
-rename mrun_2 mrun_2_orig
-merge m:1 mrun_1 using `simulacion'
-drop mrun_2
-rename institution_id rbd_1
-rename mrun_2_orig mrun_2
-drop if _merge == 2
-drop _merge 
-
-rename mrun_1 mrun_1_orig
-merge m:1 mrun_2 using `simulacion'
-drop mrun_1
-rename institution_id rbd_2
-rename mrun_1_orig mrun_1
-drop if _merge == 2
-drop _merge 
-
-gen ambos_asignados = 0
-replace ambos_asignados = 1 if rbd_1 != . & rbd_2 != .
-
-gen asignado_igual = 0  if ambos_asignados == 1
-replace asignado_igual = 1 if rbd_1 == rbd_2 & ambos_asignados == 1
-
-tab ambos_asignados if mismo_nivel == 0
-tab asignado_igual if mismo_nivel == 0
 
 // ------ Análisis a nivel de estudiante ------ //
 
@@ -697,75 +663,38 @@ tab respuesta_final if n_hermanos == 1 & mismo_nivel == 0 & postula_en_bloque ==
 tempfile etapa_reg_estudiantes
 save  `etapa_reg_estudiantes', replace
 
+* Simulaciones: por python, análisis por acá
 
-// ------ ETAPA COMPLEMENTARIA ------ //
+import delimited "$pathData/inputs/analysis-2021/SAE_2021/Simulaciones/results_true_true.csv", clear
+keep applicant_id institution_id
+rename applicant_id mrun 
+tempfile simulacion_1
+save  `simulacion_1', replace
 
-import delimited "$pathData/inputs/analysis-2021/SAE_2021/D2_Resultados_etapa_complementaria_2021_Admisión_2022_PUBL.csv", clear
-tempfile asig_comp
-save  `asig_comp', replace
-
-import delimited "$pathData/inputs/analysis-2021/SAE_2021/C2_Postulaciones_etapa_complementaria_2021_Admisión_2022_PUBL.csv", clear 
-tempfile postulaciones_comp
-save  `postulaciones_comp', replace
-
-import delimited "$pathData/inputs/analysis-2021/SAE_2021/F2_Relaciones_entre_postulantes_etapa_complementaria_2021_Admisión_2022_PUBL.csv", clear
-
-duplicates report mrun_1 mrun_2
-bys mrun_1: egen n_hermanos = count(mrun_2)
-
-gen relacion = _n
-
-reshape long mrun_@ , i(relacion) j(aux)
-
-gen hermano_mayor = (aux == 1)
-gen hermano_menor = (aux == 2)
-
-bys mrun_: egen n_relaciones = count(relacion)
-
-sort relacion mrun
-rename mrun_ mrun
-order mrun
-
-collapse (firstnm) mismo_nivel* postula_en_bloque* n_hermanos (max) hermano_* n_relaciones, by (mrun)
-* Ojo: hay estudiantes que son hermano_mayor == 1 & hermano_menor == 1
-order n_hermanos
-
-tempfile hermanos_comp
-save  `hermanos_comp', replace
-
-import delimited "$pathData/inputs/analysis-2021/SAE_2021/B2_Postulantes_etapa_complementaria_2021_Admisión_2022_PUBL.csv", clear 
-merge 1:1 mrun using  `hermanos_comp'
-*No hay _merge == 2.
+use  `etapa_reg_estudiantes', replace
+merge 1:1 mrun using `simulacion_1'
+rename institution_id rbd_1
+drop if _merge == 2
 drop _merge
-replace n_hermanos = 0 if n_hermanos == .
+tempfile etapa_reg_estudiantes_1
+save  `etapa_reg_estudiantes_1', replace
 
-merge 1:1 mrun using  `asig_comp'
-*Solo _merge == 3.
-drop _merge
+use  `simulacion_1', replace
+rename mrun mrun_hermano
+tempfile simulacion_2
+save  `simulacion_2', replace
 
-destring rbd_admitido cod_curso_admitido, replace
-rename (rbd_admitido cod_curso_admitido) (rbd cod_curso)
-merge 1:1 mrun rbd cod_curso using `postulaciones_comp'
-
+use  `etapa_reg_estudiantes_1', clear
+merge m:1 mrun_hermano using `simulacion_2'
+rename institution_id rbd_hermano
+count if mrun_hermano!=. & _merge == 1 	// 0 obs.
 drop if _merge == 2
 drop _merge
 
-rename (rbd cod_curso)(rbd_admitido cod_curso_admitido)
+count if rbd_1 != .
+count if rbd_1 != . & n_hermanos == 1 & mismo_nivel == 0
+count if rbd_1 != . & n_hermanos == 1 & mismo_nivel == 0 & rbd_1 == rbd_hermano
 
-count if n_hermanos == 0
-count if n_hermanos > 0 & postula_en_bloque == 0
-count if n_hermanos > 0 & postula_en_bloque == 1
-
-count if n_hermanos == 0 & rbd_admitido !=.
-count if n_hermanos > 0 & postula_en_bloque == 0 & rbd_admitido !=.
-count if n_hermanos > 0 & postula_en_bloque == 1 & rbd_admitido !=.
-
-tab preferencia_postulante if n_hermanos == 0 & rbd_admitido !=.
-tab preferencia_postulante if n_hermanos > 0 & postula_en_bloque == 0 & rbd_admitido !=.
-tab preferencia_postulante if n_hermanos > 0 & postula_en_bloque == 1 & rbd_admitido !=.
-
-tempfile etapa_complementaria
-save  `etapa_complementaria', replace
 
 // ------------------------------------------------- //
 // ----------------- MATRÍCULA  ------------------- //
