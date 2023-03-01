@@ -11,7 +11,7 @@
 if "`c(username)'"=="javieragazmuri" { // Javiera
 	global main =  "/Users/javieragazmuri/ConsiliumBots Dropbox/ConsiliumBots/Projects/Chile/Siblings"
 	global pathGit = "/Users/javieragazmuri/Documents/GitHub/cb-siblings"
-  }
+}
 
 global pathData "$main/data"
 
