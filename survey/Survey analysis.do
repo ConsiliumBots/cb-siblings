@@ -20,11 +20,14 @@ global pathData "$main/data"
 // ----------------------------------------------------------------
 import delimited "/Users/javieragazmuri/Downloads/datos_jpal_2022-10-05_enviar.csv", clear 
 bysort id_postulante id_apoderado: generate n_postulante = _n == 1
-bysort id_apoderado: replace n_postulante = sum(n_postulante)
-bysort id_apoderado: replace n_postulante = n_postulante[_N]
+keep if n_postulante == 1
+
+bysort id_apoderado: ereplace n_postulante = sum(n_postulante)
+
 keep if n_postulante == 2
+bys id_apoderado: egen prom_post = mean(postulacion_familiar)  // no hay variación a nivel de id_apoderado
 keep id_apoderado postulacion_familiar         
-collapse (firstnm) postulacion_familiar, by(id_apoderado)            // no hay variación a nivel de id_apoderado
+collapse (firstnm) postulacion_familiar, by(id_apoderado)  
 
 tempfile datos_jpal
 save `datos_jpal', replace
@@ -34,6 +37,9 @@ keep if qid1 == "3" // Consent
 merge m:1 id_apoderado using `datos_jpal'
 drop if _merge == 2
 drop _merge
+
+gen prioritario = 1 if q327 == "1"
+replace prioritario = 0 if q327 == "2" | q327 == "3"
 
 // ----------------------------------------------------------------
 // Q213 ¿Qué asignación prefieres? Tu favorita si es que quedan en establecimientos diferentes, o la que menos te gusta si quedan en el mismo establecimiento.
@@ -210,6 +216,11 @@ tab cs_2_preferencia_menor cs_3_preferencia_mayor if q212 == 4 & _merge == 3 & p
 tab cs_3_preferencia_menor cs_1_preferencia_mayor if q212 == 5 & _merge == 3 & postulacion_familiar == 0
 tab cs_3_preferencia_menor cs_2_preferencia_mayor if q212 == 6 & _merge == 3 & postulacion_familiar == 0
 
+// ----------------------------------------------------------------
+// Q183 ¿Sabes qué pasa cuando marcas "postulación familiar" en el SAE?
+// ----------------------------------------------------------------
+
+tab q183 prioritario if q183 != "NA"
 
 // ----------------------------------------------------------------
 // Q184 Por favor, explica con tus propias palabras qué es lo que crees que pasa cuando marcas esta opción (postulación familiar)
