@@ -1,9 +1,3 @@
-// ---------------------------------------------- //
-// ---------------------------------------------- //
-// --------- SIBLINGS JOINT APPLICATION --------- //
-// ---------------------------------------------- //
-// ---------------------------------------------- //
-
 // -----------------------------------------------------------------------------
 // File Description
 // -----------------------------------------------------------------------------
@@ -15,38 +9,30 @@
 
 // -----------------------------------------------------------------------------
 
-if "`c(username)'"=="javieragazmuri" { // Javiera
-	global main =  "/Users/javieragazmuri/ConsiliumBots Dropbox/ConsiliumBots/Projects/Chile/Siblings"
-	global pathGit = "/Users/javieragazmuri/Documents/GitHub/cb-siblings"
-  }
-
-global pathData "$main/data"
-
 // ---------------------------------------------- //
 // --------------------- DATA ------------------- //
 // ---------------------------------------------- //
 
 // ------ MAIN STAGE ------ //
 
-import delimited "$pathData/inputs/analysis-2021/SAE_2021/D1_Resultados_etapa_regular_2021_Admisión_2022_PUBL.csv", clear
-tempfile asig_reg
-save  `asig_reg', replace
+  import delimited "$pathData/inputs/analysis-2021/SAE_2021/D1_Resultados_etapa_regular_2021_Admisión_2022_PUBL.csv", clear
+  tempfile asig_reg
+  save  `asig_reg', replace
 
-import delimited "$pathData/inputs/analysis-2021/SAE_2021/C1_Postulaciones_etapa_regular_2021_Admisión_2022_PUBL.csv", clear 
-tempfile postulaciones_reg
-save  `postulaciones_reg', replace
+  import delimited "$pathData/inputs/analysis-2021/SAE_2021/C1_Postulaciones_etapa_regular_2021_Admisión_2022_PUBL.csv", clear 
+  tempfile postulaciones_reg
+  save  `postulaciones_reg', replace
 
-import delimited "$pathData/inputs/analysis-2021/SAE_2021/F1_Relaciones_entre_postulantes_etapa_regular_2021_Admisión_2022_PUBL.csv", clear
-duplicates report mrun_1 mrun_2
-gen relacion = _n
-tempfile relaciones_reg
-save  `relaciones_reg', replace  // this data has no duplicate relationships. Eg: if mrun_1 = 1 & mrun_2 = 2, there is no observation with mrun_1 = 2 & mrun_2 = 1
+  import delimited "$pathData/inputs/analysis-2021/SAE_2021/F1_Relaciones_entre_postulantes_etapa_regular_2021_Admisión_2022_PUBL.csv", clear
+  duplicates report mrun_1 mrun_2
+  gen relacion = _n
+  tempfile relaciones_reg
+  save  `relaciones_reg', replace  // this data has no duplicate relationships. Eg: if mrun_1 = 1 & mrun_2 = 2, there is no observation with mrun_1 = 2 & mrun_2 = 1
 
-import delimited "$pathData/inputs/analysis-2021/SAE_2021/B1_Postulantes_etapa_regular_2021_Admisión_2022_PUBL.csv", clear
-keep mrun prioritario
-tempfile prioritario
-save  `prioritario', replace
-
+  import delimited "$pathData/inputs/analysis-2021/SAE_2021/B1_Postulantes_etapa_regular_2021_Admisión_2022_PUBL.csv", clear
+  keep mrun prioritario
+  tempfile prioritario
+  save  `prioritario', replace
 
 // ------------------------------------------------ //
 // -----------------  ENROLLMENT  ----------------- //

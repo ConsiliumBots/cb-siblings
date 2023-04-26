@@ -73,6 +73,13 @@ replace intervalo = 9 if q180_1<=100 & q180_1>90 & q180_1!=.
 tab intervalo postulacion_familiar  & n_postulante == 2
 
 // ----------------------------------------------------------------
+// Q223 Si tus hijos quedan en establecimientos distintos luego del proceso principal y complementario SAE, ¿Qué es lo más probable que hagas?
+// ----------------------------------------------------------------
+
+tab q223 if n_postulante == 2 & postulacion_familiar == 0
+tab q223 if n_postulante == 2 & postulacion_familiar == 1
+
+// ----------------------------------------------------------------
 // Q225 Si los postulantes quedan asignados en tu opción más preferida, ¿Con qué probabilidad crees que intentarías de cambiar a algún postulante el próximo año? 
 // ----------------------------------------------------------------
 
@@ -246,38 +253,39 @@ tab categorias postulacion_familiar & n_postulante == 2
 
 	* _1 de hijo menor, _2 de hijo mayor 
 
-	* Primero, vemos cuántas observaciones hay para los siguientes casos
-	* pref1_1 = pref1_2 & pref2_1 = pref1_2 
-	count if school_name1_1 == school_name1_2 & school_name2_1 == school_name1_2 & school_name1_1 != "" & school_name1_2 != "" & school_name2_1 != "" & n_postulante == 2  // 74
-	* pref1_1 = pref1_2 & pref2_1 = pref2_2 												-> Caso relevante
-	count if school_name1_1 == school_name1_2 & school_name2_1 == school_name2_2 & school_name1_1 != "" & school_name1_2 != "" & school_name2_1 != "" & school_name2_2 != "" & n_postulante == 2  // 2.221
-	* pref1_1 = pref1_2 & (pref2_1 != pref1_2 & pref2_1 != pref2_2) 						-> Caso relevante
-	count if school_name1_1 == school_name1_2 & school_name2_1 != school_name1_2 & school_name2_1 != school_name2_2 & school_name1_1 != "" & school_name1_2 != "" & school_name2_1 != "" & school_name2_2 != "" & n_postulante == 2  // 414
-	* pref1_1 = pref2_2 & pref2_1 = pref1_2
-	count if school_name1_1 == school_name2_2 & school_name2_1 == school_name1_2 & school_name1_1 != "" & school_name1_2 != "" & school_name2_1 != "" & school_name2_2 != "" & n_postulante == 2  // 96
-	* pref1_1 = pref2_2 & pref2_1 = pref2_2
-	count if school_name1_1 == school_name2_2 & school_name2_1 == school_name2_2 & school_name1_1 != "" & school_name2_1 != "" & school_name2_2 != "" & n_postulante == 2  // 30
-	* pref1_1 = pref2_2 & (pref2_1 != pref1_2 & pref2_1 != pref2_2)
-	count if school_name1_1 == school_name2_2 & school_name2_1 != school_name1_2 & school_name2_1 != school_name2_2 & school_name1_1 != "" & school_name1_2 != "" & school_name2_1 != "" & school_name2_2 != "" & n_postulante == 2  // 172
-	* (pref1_1 != pref1_2 & pref1_1 = pref2_2) & pref2_1 = pref1_2
-	count if school_name1_1 != school_name1_2 & school_name1_1 != school_name2_2 & school_name2_1 == school_name1_2 & school_name1_1 != "" & school_name1_2 != "" & school_name2_1 != "" & school_name2_2 != "" & n_postulante == 2  // 109
-	* (pref1_1 != pref1_2 & pref1_1 = pref2_2) & pref2_1 = pref2_2
-	count if school_name1_1 != school_name1_2 & school_name1_1 != school_name2_2 & school_name2_1 == school_name2_2 & school_name1_1 != "" & school_name1_2 != "" & school_name2_1 != "" & school_name2_2 != "" & n_postulante == 2  // 104
-	* (pref1_1 != pref1_2 & pref1_1 = pref2_2) & (pref2_1 != pref1_2 & pref2_1 != pref2_2) 	-> Caso relevante
-	count if school_name1_1 != school_name1_2 & school_name1_1 != school_name2_2 & school_name2_1 != school_name1_2 & school_name2_1 != school_name2_2 & school_name1_1 != "" & school_name1_2 != "" & school_name2_1 != "" & school_name2_2 != "" & n_postulante == 2  // 456
+	// 1. Contar cuántas observaciones perdemos por repetir un mismo colegio entre las preferencias de un mismo estudiante: school_name1_1 == school_name2_1
 
-	* Caso relevante 1: 1ªs y 2ªs pref. iguales
-	gen caso = 0
-	count if school_name1_1 == school_name1_2 & school_name2_1 == school_name2_2 & school_name1_1 != "" & school_name1_2 != "" & school_name2_1 != "" & school_name2_2 != "" & n_postulante == 2  // 2.221
-	replace caso = 1 if school_name1_1 == school_name1_2 & school_name2_1 == school_name2_2 & school_name1_1 != "" & school_name1_2 != "" & school_name2_1 != "" & school_name2_2 != "" & n_postulante == 2 
-	* Caso relevante 2: 1ªs iguales, 2ªs distintas
-	count if school_name1_1 == school_name1_2 & school_name2_1 != school_name1_2 & school_name2_1 != school_name2_2 & school_name2_2 != school_name1_1 & school_name1_1 != "" & school_name1_2 != "" & school_name2_1 != "" & school_name2_2 != "" & n_postulante == 2 // 408
-	replace caso = 2 if school_name1_1 == school_name1_2 & school_name2_1 != school_name1_2 & school_name2_1 != school_name2_2 & school_name2_2 != school_name1_1 & school_name1_1 != "" & school_name1_2 != "" & school_name2_1 != "" & school_name2_2 != "" & n_postulante == 2 
-	* Caso relevante 3: preferencias distintas
-	count if school_name1_1 != school_name1_2 & school_name1_1 != school_name2_2 & school_name2_1 != school_name1_2 & school_name2_1 != school_name2_2 & school_name1_1 != "" & school_name1_2 != "" & school_name2_1 != "" & school_name2_2 != "" & n_postulante == 2  // 456
-	replace caso = 3 if school_name1_1 != school_name1_2 & school_name1_1 != school_name2_2 & school_name2_1 != school_name1_2 & school_name2_1 != school_name2_2 & school_name1_1 != "" & school_name1_2 != "" & school_name2_1 != "" & school_name2_2 != "" & n_postulante == 2
+		count if n_postulante == 2 																			// N total = 4.906
+		count if n_postulante == 2 & (school_name1_1 == school_name2_1 | school_name1_2 == school_name2_2) 	// N = 802
 
-	// Análisis:
+		gen 	grupo_interes = 0
+		replace grupo_interes = 1 if n_postulante == 2 & school_name1_1 != school_name2_1 & school_name1_2 != school_name2_2
+
+	// 2. Hay diferentes casos, dependiendo de diferentes combinaciones
+		
+		* pref1_1 = pref1_2 & pref2_1 = pref2_2 												-> Caso relevante
+		count if grupo_interes == 1 & school_name1_1 == school_name1_2 & school_name2_1 == school_name2_2 & school_name1_1 != "" & school_name1_2 != "" & school_name2_1 != "" & school_name2_2 != "" 	// N = 2.196 (54%)
+
+		* pref1_1 = pref1_2 & pref2_1 != pref2_2						 						-> Caso relevante
+		count if grupo_interes == 1 & school_name1_1 == school_name1_2 & school_name2_1 != school_name2_2 & school_name1_1 != "" & school_name1_2 != "" & school_name2_1 != "" & school_name2_2 != "" 	// N = 408 (10%)
+
+		* (pref1_1 != pref1_2 & pref1_1 = pref2_2) & (pref2_1 != pref1_2 & pref2_1 != pref2_2) 	-> Caso relevante
+		count if grupo_interes == 1 & school_name1_1 != school_name1_2 & school_name1_1 != school_name2_2 & school_name2_1 != school_name1_2 & school_name2_1 != school_name2_2 & school_name1_1 != "" & school_name1_2 != "" & school_name2_1 != "" & school_name2_2 != ""  // N = 439 (11%)
+
+		* pref1_1 != pref1_2 & pref2_1 = pref2_2												-> Caso relevante
+		count if grupo_interes == 1 & school_name1_1 != school_name1_2 & school_name2_1 == school_name2_2 & school_name1_1 != "" & school_name1_2 != "" & school_name2_1 != "" & school_name2_2 != "" 	// N = 102 (2,5%)
+
+		gen caso = 0
+		* Caso relevante 1: 1ªs y 2ªs pref. iguales
+		replace caso = 1 if grupo_interes == 1 & school_name1_1 == school_name1_2 & school_name2_1 == school_name2_2 & school_name1_1 != "" & school_name1_2 != "" & school_name2_1 != "" & school_name2_2 != "" 
+		* Caso relevante 2: 1ªs iguales, 2ªs distintas
+		replace caso = 2 if grupo_interes == 1 & school_name1_1 == school_name1_2 & school_name2_1 != school_name2_2 & school_name1_1 != "" & school_name1_2 != "" & school_name2_1 != "" & school_name2_2 != "" 
+		* Caso relevante 3: 1ªs distintas, 2ªs iguales
+		replace caso = 3 if grupo_interes == 1 & school_name1_1 != school_name1_2 & school_name2_1 == school_name2_2 & school_name1_1 != "" & school_name1_2 != "" & school_name2_1 != "" & school_name2_2 != "" 
+		* Caso relevante 4: preferencias distintas
+		replace caso = 4 if grupo_interes == 1 & school_name1_1 != school_name1_2 & school_name1_1 != school_name2_2 & school_name2_1 != school_name1_2 & school_name2_1 != school_name2_2 & school_name1_1 != "" & school_name1_2 != "" & school_name2_1 != "" & school_name2_2 != ""  
+
+	// 3. Análisis:
 		// Promedios
 			tabstat q178_1 if n_postulante == 2 & caso == 1, stat(mean) by(postulacion_familiar)
 			tabstat q178_2 if n_postulante == 2 & caso == 1, stat(mean) by(postulacion_familiar)
@@ -296,6 +304,12 @@ tab categorias postulacion_familiar & n_postulante == 2
 			tabstat q178_3 if n_postulante == 2 & caso == 3, stat(mean) by(postulacion_familiar)
 			tabstat q178_4 if n_postulante == 2 & caso == 3, stat(mean) by(postulacion_familiar)
 			tabstat q178_5 if n_postulante == 2 & caso == 3, stat(mean) by(postulacion_familiar)
+
+			tabstat q178_1 if n_postulante == 2 & caso == 4, stat(mean) by(postulacion_familiar)
+			tabstat q178_2 if n_postulante == 2 & caso == 4, stat(mean) by(postulacion_familiar)
+			tabstat q178_3 if n_postulante == 2 & caso == 4, stat(mean) by(postulacion_familiar)
+			tabstat q178_4 if n_postulante == 2 & caso == 4, stat(mean) by(postulacion_familiar)
+			tabstat q178_5 if n_postulante == 2 & caso == 4, stat(mean) by(postulacion_familiar)
 
 		// % Opción más preferida
 			forvalues x = 1/5 {
@@ -320,3 +334,19 @@ tab categorias postulacion_familiar & n_postulante == 2
 			tabstat dummy_3 if n_postulante == 2 & caso == 3, stat(mean) by(postulacion_familiar)
 			tabstat dummy_4 if n_postulante == 2 & caso == 3, stat(mean) by(postulacion_familiar)
 			tabstat dummy_5 if n_postulante == 2 & caso == 3, stat(mean) by(postulacion_familiar)
+
+			tabstat dummy_1 if n_postulante == 2 & caso == 4, stat(mean) by(postulacion_familiar)
+			tabstat dummy_2 if n_postulante == 2 & caso == 4, stat(mean) by(postulacion_familiar)
+			tabstat dummy_3 if n_postulante == 2 & caso == 4, stat(mean) by(postulacion_familiar)
+			tabstat dummy_4 if n_postulante == 2 & caso == 4, stat(mean) by(postulacion_familiar)
+			tabstat dummy_5 if n_postulante == 2 & caso == 4, stat(mean) by(postulacion_familiar)
+
+		// Beneficiados vs perjudicados
+
+			gen contesta = 1 * ((q178_1 + q178_2 + q178_3 + q178_4 + q178_5) != . )
+
+			count if q178_2 > q178_4 & contesta == 1 & caso == 1 & postulacion_familiar == 1  // beneficiados por postulación familiar
+			count if q178_2 < q178_4 & contesta == 1 & caso == 1 & postulacion_familiar == 1 // perjudicados por postulación familiar
+
+			count if q178_2 > q178_4 & contesta == 1 & caso == 1 & postulacion_familiar == 0  // se beneficiarían por la postulación familiar
+			count if q178_2 < q178_4 & contesta == 1 & caso == 1 & postulacion_familiar == 0 // se verían perjudicados por la postulación familiar
