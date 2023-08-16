@@ -5,7 +5,7 @@
 	// Objective: Limpieza para obtener las probabilidades de asignación,  
     // para ver los elementos que mostraremos en la cartilla
 	// Created: 2023
-	// Last Modified: August 3, 2023
+	// Last Modified: August 9, 2023
 	// Author: Javi Gazmuri
 
 // -----------------------------------------------------------------------------
@@ -127,11 +127,82 @@
             tempfile grupos_postulaciones 
             save `grupos_postulaciones', replace
 
-        // Postulantes de interés
+    // Supuesto: nos quedamos con las relaciones que postulan a algún establecimiento en común
 
+        // First, we need to eliminate rbd duplicates (and preferences aggregated by continuity) from the students' preferences
+
+            use  `postulaciones', clear
+
+            drop if agregada_por_continuidad == 1
+
+            keep mrun rbd preferencia_postulante cod_nivel
+
+            collapse (min) preferencia_postulante cod_nivel, by(mrun rbd)
+            bys mrun: egen order = rank(preferencia_postulante)
+
+            unique mrun order // unique obs
+            drop preferencia_postulante
+            rename order preferencia_postulante
+
+            rename rbd rbd_1_
+        
+        // Then, we need the wide form of preferences
+
+            reshape wide rbd_1_ , i(mrun) j(preferencia_postulante)
+            rename (mrun cod_nivel) (mrun_1 cod_nivel_1)
+
+            tempfile postulaciones_wide
+            save  `postulaciones_wide', replace
+
+            forvalues x = 1/104 {
+                rename rbd_1_`x' rbd_2_`x'
+            }
+
+            rename (mrun_1 cod_nivel_1)(mrun_2 cod_nivel_2)
+            tempfile postulaciones_wide_hno
+            save  `postulaciones_wide_hno', replace
+
+        // Merging with relationship data
+            use  `relaciones', clear
+            merge m:1 mrun_1 using `postulaciones_wide', keep(3) nogen
+            merge m:1 mrun_2 using `postulaciones_wide_hno', keep(3) nogen
+
+        // Indicator: number of schools applied in common
+            forvalues x = 1/104 {
+                gen is_rbd_1_`x' = 0
+                forvalues y = 1/104 {
+                    replace is_rbd_1_`x' = `y' if rbd_1_`x' == rbd_2_`y' 
+                }
+                replace is_rbd_1_`x' = . if rbd_1_`x' == .  // is_rbd_1_x == . means sibling 1 has no postulation in the preference x.
+                // is_rbd_1_x = 0 means sibling 1 has a postulation in the preference x, but there is no match with sibling 2.
+            }
+
+            gen n_escuelas_comun = 0
+            forvalues x = 1/104 {
+                replace n_escuelas_comun = n_escuelas_comun + (( is_rbd_1_`x' != . ) & ( is_rbd_1_`x' != 0 ))
+            }
+
+            keep mrun_1 mrun_2 n_escuelas_comun
+            rename mrun_1 mrun
+            rename mrun_2 mrun_hermano_final
+            tempfile relaciones_postulacion_comun_1
+            save `relaciones_postulacion_comun_1', replace
+
+            rename mrun aux
+            rename mrun_hermano_final mrun
+            rename aux mrun_hermano_final
+
+            tempfile relaciones_postulacion_comun_2
+            save `relaciones_postulacion_comun_2', replace
+
+    // Postulantes de interés
+
+        // Ambos seleccionados
+            
             use `postulantes', clear
             rename mrun mrun_1
             merge 1:1 mrun_1 using `grupos_postulaciones', gen(_merge_mrun_1)
+
             rename mrun_2 mrun_hermano
             rename mrun_1 mrun_2
             merge 1:1 mrun_2 using `grupos_postulaciones', gen(_merge_mrun_2) update
@@ -147,37 +218,41 @@
 
             drop _merge_* mrun_hermano mrun_1
 
+            keep mrun hermano_mayor prioritario alto_rendimiento mismo_nivel postula_en_bloque mrun_hermano_final
+
+        // Con n_postulaciones_comun > 0
+
+            merge 1:1 mrun mrun_hermano_final using `relaciones_postulacion_comun_1', keep(1 3) nogen
+            merge 1:1 mrun mrun_hermano_final using `relaciones_postulacion_comun_2', keep(1 4) nogen update
+
+            drop if n_escuelas_comun == 0
+
     // Variables de interés
 
-        keep mrun hermano_mayor prioritario alto_rendimiento mismo_nivel postula_en_bloque mrun_hermano_final
-        tempfile postulantes_final 
-        save `postulantes_final', replace
+        // Postulaciones
 
-    // Postulaciones
+            merge 1:m mrun using `postulaciones', keep(3) nogen
+            rename cod_curso codcurso
 
-        use `postulaciones', clear 
-        merge m:1 mrun using `postulantes_final', keep(3) nogen
-        rename cod_curso codcurso
+            gen     criterioprioridad = 1        
+            replace criterioprioridad = 6 if criterioprioridad == 1 & prioridad_matriculado == 1
+            replace criterioprioridad = 5 if criterioprioridad == 1 & prioridad_hermano == 1
+            //      criterioprioridad = 4 es la prioridad hermano dinámica
+            replace criterioprioridad = 3 if criterioprioridad == 1 & prioridad_hijo_funcionario == 1
+            replace criterioprioridad = 2 if criterioprioridad == 1 & prioridad_exalumno == 1
 
-        gen     criterioprioridad = 1        
-        replace criterioprioridad = 6 if criterioprioridad == 1 & prioridad_matriculado == 1
-        replace criterioprioridad = 5 if criterioprioridad == 1 & prioridad_hermano == 1
-        //      criterioprioridad = 4 es la prioridad hermano dinámica
-        replace criterioprioridad = 3 if criterioprioridad == 1 & prioridad_hijo_funcionario == 1
-        replace criterioprioridad = 2 if criterioprioridad == 1 & prioridad_exalumno == 1
+            keep mrun hermano_mayor rbd codcurso preferencia_postulante criterioprioridad prioritario alto_rendimiento mismo_nivel postula_en_bloque mrun_hermano_final
 
-        keep mrun hermano_mayor rbd codcurso preferencia_postulante criterioprioridad prioritario alto_rendimiento mismo_nivel postula_en_bloque mrun_hermano_final
+            // Tipo de postulación
 
-    // Tipo de postulación
+                preserve
+                    import delimited "$pathData/intermediate/simulation_probabilities/tipos_data-_oficialEqSAEAnterior_500r_exp0.csv", clear
+                    drop criterioprioridad_label tipo_label
+                    tempfile tipos 
+                    save `tipos', replace
+                restore
 
-        preserve
-            import delimited "$pathData/intermediate/simulation_probabilities/tipos_data-_oficialEqSAEAnterior_500r_exp0.csv", clear
-            drop criterioprioridad_label tipo_label
-            tempfile tipos 
-            save `tipos', replace
-        restore
-
-        merge m:1 criterioprioridad prioritario alto_rendimiento using `tipos', keep(3) nogen
+                merge m:1 criterioprioridad prioritario alto_rendimiento using `tipos', keep(3) nogen
 
         export delimited "$pathData/intermediate/simulation_probabilities/inputs_for_joint_probabilities.csv", replace
 
