@@ -59,16 +59,18 @@
 	// ----------------------------------------------------------------
 
 	gen categorias = .  
-	br q184 categorias if q184!=""       // Hacer el reemplazo a mano
+	br q184 categorias if q184!="" & n_postulante == 2 & cant_common_rbd > 0 & cant_common_rbd != .      // Hacer el reemplazo a mano
 	// categorias == 1 : cambio en el ranking de preferencias
 	// categorias == 2 : preferencia a que hijos queden juntos
 	// categorias == 3 : prioridad hermano
 	// categorias == 4 : postular a más de un niño
 	// categorias == 5 : asegura igual matrícula
 	// categorias == 6 : todos o ninguno (si sólo uno de los hermanos es admitido pero no hay cupos para el otro, se desecha la asignación del primero y se deja a ambos hermanos sin matrícula)
-	// categorias == 7 : otro
+	// categorias == 7 : aumenta la probabilidad de@
 
-	tab categorias postulacion_familiar & n_postulante == 2
+	// categorias == 8 : otro
+
+	tab categorias postulacion_familiar & n_postulante == 2 & cant_common_rbd > 0 & cant_common_rbd != .
 
 // ----------------------------------------------------------------
 // Preferencias
