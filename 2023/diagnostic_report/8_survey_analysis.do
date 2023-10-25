@@ -4,27 +4,16 @@
 	// Project: Siblings Chile
 	// Objective: Analysis of 2021 and 2022 surveys
 	// Created: 2022
-	// Last Modified: May 12, 2023
+	// Last Modified: Sept 11, 2023
 	// Author: Javi Gazmuri
 
 // -----------------------------------------------------------------------------
 
 // ----------------------------------------------------------------
-// Paths
-// ----------------------------------------------------------------
-
-	if "`c(username)'"=="javieragazmuri" { // Javiera
-		global main =  "/Users/javieragazmuri/ConsiliumBots Dropbox/ConsiliumBots/Projects/Chile/Siblings"
-		global pathGit = "/Users/javieragazmuri/Documents/GitHub/cb-siblings"
-	}
-
-	global pathData "$main/data"
-
-// ----------------------------------------------------------------
 // Data clean Survey 2022
 // ----------------------------------------------------------------
 
-	import delimited "/Users/javieragazmuri/Downloads/datos_jpal_2022-10-05_enviar.csv", clear 
+	import delimited "$pathData/inputs/survey/2022/datos_jpal_2022-10-05_enviar.csv", clear 
 	bysort id_postulante id_apoderado: generate n_postulante = _n == 1
 	keep if n_postulante == 1
 
@@ -58,19 +47,36 @@
 	// Q184 Por favor, explica con tus propias palabras qué es lo que crees que pasa cuando marcas esta opción (postulación familiar)
 	// ----------------------------------------------------------------
 
-	gen categorias = .  
-	br q184 categorias if q184!="" & n_postulante == 2 & cant_common_rbd > 0 & cant_common_rbd != .      // Hacer el reemplazo a mano
+	br q184 if q184!="" & n_postulante == 2 & cant_common_rbd > 0 & cant_common_rbd != .      // Hacer el reemplazo a mano
 	// categorias == 1 : cambio en el ranking de preferencias
 	// categorias == 2 : preferencia a que hijos queden juntos
 	// categorias == 3 : prioridad hermano
 	// categorias == 4 : postular a más de un niño
 	// categorias == 5 : asegura igual matrícula
 	// categorias == 6 : todos o ninguno (si sólo uno de los hermanos es admitido pero no hay cupos para el otro, se desecha la asignación del primero y se deja a ambos hermanos sin matrícula)
-	// categorias == 7 : aumenta la probabilidad de@
+	// categorias == 7 : aumenta la probabilidad de asignación 
 
 	// categorias == 8 : otro
+	
+	preserve
+		import delimited "$pathData/intermediate/survey/categories_for_link_application.csv", clear
+		keep responseid categorias
+		tempfile explicacion_post_fam
+		save `explicacion_post_fam', replace
+	restore 
 
-	tab categorias postulacion_familiar & n_postulante == 2 & cant_common_rbd > 0 & cant_common_rbd != .
+	merge 1:1 responseid using `explicacion_post_fam', nogen
+
+	label def categ 1 "Cambio ranking de preferencias" 2 "Preferencia hijos queden juntos" 3 "Prioridad hermano" 4 "Postular a más de un niño" 5 "Asegura igual matrícula" 6 "Todos o ninguno asignado" 7 "Aumenta prob. de asignación" 8 "Otro"
+	label values categorias categ
+
+	gen aux_1 = 1 if postulacion_familiar == 1
+	gen aux_2 = 1 if postulacion_familiar == 0
+
+    count if categorias != .
+    local N `r(N)'
+	graph hbar (percent) aux_1 aux_2, over(categorias) bar(1, color(purple%70)) bar(2, color(red%70)) ytitle("Porcentaje") ///
+	note("N = `N'") legend(label(1 "Postulación familiar") label(2 "Postulación regular")) blabel(bar, position(inside) format(%9.0f) color(white))
 
 // ----------------------------------------------------------------
 // Preferencias
