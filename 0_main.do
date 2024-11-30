@@ -21,9 +21,13 @@
 	}
 
 	global pathData "$main_silings/data"
-	global pathData_sae "$main_sae/encuesta"
+	global pathData_survey "$main_sae/encuesta"
+	global pathData_feedback_reg "$main_sae/cartillas/cartillas_postulación/1_etapa_regular"
+	global pathData_feedback_comp "$main_sae/cartillas/cartillas_postulación/2_etapa_complementaria"
 
+// ----------------------------------------------------------------
 // Set graph style
+// ----------------------------------------------------------------
 
     grstyle init
     grstyle color background white

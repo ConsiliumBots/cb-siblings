@@ -2,7 +2,7 @@
 // File Description
 // -----------------------------------------------------------------------------
 	// Project: Siblings Chile
-	// Objective: Preliminar analysis of 2023 survey
+	// Objective: Preliminar analysis of 2023 online survey
 	// Created: Oct 20, 2023
 	// Last Modified: Oct 23, 2023
 	// Author: Javi Gazmuri
@@ -13,7 +13,7 @@
 // Data 
 // ----------------------------------------------------------------
 
-    import delimited "$pathData_sae/outputs/responses/SAE_survey_2023_responses_Full_sample.csv", clear
+    import delimited "$pathData_survey/outputs/responses/SAE_survey_2023_responses_Full_sample.csv", clear
     drop if id_apoderado == ""
     tempfile respuestas
     save `respuestas', replace
@@ -393,7 +393,7 @@
 
         // Respuestas
 
-            import delimited "$pathData_sae/outputs/responses/SAE_survey_2023_responses_Full_sample.csv", clear
+            import delimited "$pathData_survey/outputs/responses/SAE_survey_2023_responses_Full_sample.csv", clear
             drop if id_apoderado == ""
 
             keep id_apoderado sibl14 sibl15 sibl16 sibl17 opcion_seleccionada sibl11
@@ -461,7 +461,7 @@
 
         // Respuestas
 
-            import delimited "$pathData_sae/outputs/responses/SAE_survey_2023_responses_Full_sample.csv", clear
+            import delimited "$pathData_survey/outputs/responses/SAE_survey_2023_responses_Full_sample.csv", clear
             drop if id_apoderado == ""
 
             keep id_apoderado sibl18 sibl19 opcion_seleccionada sibl11
@@ -505,5 +505,8 @@
 
             grc1leg bloque_primer_evento no_bloque_primer_evento bloque_segundo_evento no_bloque_segundo_evento
 
+            * MA 
 
-
+            twoway (kdensity ab_dif_bloque if n_evento == 2 & evento == "mat_aseg:mat_aseg" & prob_conjunta_bloque > 50 & vio_cartilla == 0, color(red%70) bwidth(15)) (kdensity ab_dif_bloque if n_evento == 2 & evento == "mat_aseg:mat_aseg" & prob_conjunta_bloque > 50 & vio_cartilla == 1, color(purple%70) bwidth(15)),  ///
+            xtitle("Valor absoluto(Prob. cartilla - prob. auto-reportada)") title("Evento: más probable con post. fam - ambos en MA") ///
+            legend(order(1 "No vio cartilla" 2 "Vio cartilla")) subtitle("Probabilidad usando la postulación familiar") ytitle("Densidad") 
