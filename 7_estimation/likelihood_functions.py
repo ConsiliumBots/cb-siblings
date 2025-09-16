@@ -38,7 +38,11 @@ class ExplodedLogitLikelihood:
                            'education_primary', 'education_secondary', 'education_tertiary']
         
         # Select only categorical columns from covariates
-        categorical_data = covariates[['respondent_id', 'choice_id'] + categorical_cols]
+        categorical_data = covariates[['respondent_id', 'choice_id'] + categorical_cols].copy()
+        
+        # Convert boolean columns to numeric (0/1)
+        for col in categorical_cols:
+            categorical_data[col] = categorical_data[col].astype(int)
         
         # Merge with survey data
         self.merged_data = data.merge(categorical_data, on=['respondent_id', 'choice_id'])
@@ -120,10 +124,14 @@ class ExplodedLogitLikelihood:
         # Stack utilities
         utilities = np.column_stack([u_both_i, u_both_j, u_split_ij, u_split_ji])
         
-        # Ensure output is a numpy array with correct shape
-        utilities = np.array(utilities)
+        # Ensure output is a numpy array with correct shape and check for numerical issues
+        utilities = np.array(utilities, dtype=np.float64)
         if utilities.ndim == 1:
             utilities = utilities.reshape(1, -1)
+        
+        # Replace any inf or nan values with large but finite numbers
+        utilities = np.where(np.isnan(utilities), -1e6, utilities)
+        utilities = np.where(np.isinf(utilities), np.sign(utilities) * 1e6, utilities)
         
         return utilities
     
@@ -141,18 +149,26 @@ class ExplodedLogitLikelihood:
         utilities = self.utility_functions(params, X)
         
         # Ensure utilities is a numpy array
-        utilities = np.array(utilities)
+        utilities = np.array(utilities, dtype=np.float64)
         
         # Logit probabilities with numerical stability
+        # Use log-sum-exp trick for numerical stability
         max_util = np.max(utilities, axis=1, keepdims=True)
-        exp_utils = np.exp(utilities - max_util)
+        
+        # Prevent overflow by clipping utilities
+        utilities_stable = np.clip(utilities - max_util, -700, 700)
+        exp_utils = np.exp(utilities_stable)
         sum_exp_utils = np.sum(exp_utils, axis=1, keepdims=True)
+        
+        # Ensure sum is not zero
+        sum_exp_utils = np.maximum(sum_exp_utils, 1e-15)
         
         probabilities = exp_utils / sum_exp_utils
         
         # Ensure probabilities are positive and sum to 1
-        probabilities = np.clip(probabilities, 1e-10, 1-1e-10)
-        probabilities = probabilities / np.sum(probabilities, axis=1, keepdims=True)
+        probabilities = np.clip(probabilities, 1e-15, 1-1e-15)
+        row_sums = np.sum(probabilities, axis=1, keepdims=True)
+        probabilities = probabilities / row_sums
         
         return probabilities
     
@@ -169,13 +185,25 @@ class ExplodedLogitLikelihood:
         try:
             probabilities = self.choice_probabilities(params, self.X)
             
-            # Calculate log-likelihood
-            log_probs = np.log(probabilities)
+            # Ensure probabilities are valid
+            if np.any(np.isnan(probabilities)) or np.any(np.isinf(probabilities)):
+                print(f"Invalid probabilities detected")
+                return -1e10
+                
+            # Calculate log-likelihood with numerical stability
+            log_probs = np.log(np.maximum(probabilities, 1e-15))
             individual_ll = np.sum(self.choices * log_probs, axis=1)
+            
+            # Check for numerical issues in individual contributions
+            if np.any(np.isnan(individual_ll)) or np.any(np.isinf(individual_ll)):
+                print(f"Invalid individual log-likelihoods detected")
+                return -1e10
+                
             total_ll = np.sum(individual_ll)
             
-            # Check for numerical issues
+            # Final check for numerical issues
             if np.isnan(total_ll) or np.isinf(total_ll):
+                print(f"Invalid total log-likelihood: {total_ll}")
                 return -1e10
                 
             return total_ll

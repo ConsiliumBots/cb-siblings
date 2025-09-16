@@ -1,0 +1,23 @@
+SIMULATION RESULTS SUMMARY
+==================================================
+
+OVERALL PREFERENCE PATTERNS:
+-----------------------------------
+Average probability of keeping siblings together: 0.749
+Average probability of splitting siblings: 0.251
+
+PREFERENCES BY HOUSEHOLD SIZE:
+-----------------------------------
+Household size 2: 0.760
+Household size 3: 0.748
+Household size 4: 0.749
+Household size 5: 0.737
+
+PREFERENCES BY QUALITY DIFFERENCE:
+----------------------------------------
+Low quality difference: 0.809
+Medium quality difference: 0.684
+High quality difference: 0.751
+
+Note: Results based on simulation with estimated parameters
+and synthetic data for testing purposes.

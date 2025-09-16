@@ -1,0 +1,27 @@
+PREFERENCE ESTIMATION RESULTS
+==================================================
+
+Log-likelihood: -9213.7696
+AIC: 18453.5392
+BIC: 18547.2736
+Observations: 10000
+Parameters: 13
+Method: L-BFGS-B
+Iterations: 39
+Time: 1.66 seconds
+
+PARAMETER ESTIMATES
+--------------------------------------------------
+quality_own         :   1.0353 (0.0275)
+quality_sibling     :   1.0102 (0.0273)
+distance_coeff      :   0.3180 (0.0084)
+together_bonus_base :   0.4981 (0.1291)
+together_bonus_household_size:  -0.0188 (0.0291)
+together_bonus_school_i_quality:   0.0128 (0.0278)
+together_bonus_school_j_quality:  -0.0002 (0.0278)
+together_bonus_school_i_distance:  -0.0116 (0.0136)
+together_bonus_school_j_distance:  -0.0013 (0.0140)
+together_bonus_income_medium:   0.0154 (0.0566)
+together_bonus_income_high:   0.0140 (0.0696)
+together_bonus_education_secondary:   0.0503 (0.0653)
+together_bonus_education_tertiary:  -0.0283 (0.0720)
