@@ -14,7 +14,7 @@ from scipy import optimize
 import json
 import time
 import os
-from typing import Dict, Tuple, Any
+from typing import Dict, Tuple, Any, List
 
 import sys
 import os
@@ -71,13 +71,53 @@ class PreferenceEstimator:
         
         return starting_values
     
-    def estimate(self, method: str = 'BFGS', maxiter: int = 1000, 
-                 tolerance: float = 1e-6) -> Dict[str, Any]:
+    def get_alternative_starting_values(self, attempt: int = 0) -> np.ndarray:
         """
-        Perform maximum likelihood estimation.
+        Generate alternative starting values for robust estimation.
         
         Args:
-            method: Optimization method
+            attempt: Which alternative to generate (0, 1, 2, ...)
+            
+        Returns:
+            np.ndarray: Alternative starting parameter vector
+        """
+        np.random.seed(42 + attempt)  # For reproducibility
+        
+        starting_values = np.zeros(self.n_params)
+        
+        if attempt == 0:
+            # More conservative values
+            starting_values[0] = 0.2   # quality_own
+            starting_values[1] = 0.1   # quality_sibling
+            starting_values[2] = -0.1  # distance_coeff
+            starting_values[3] = 0.2   # together_bonus_base
+            starting_values[4:] = np.random.normal(0, 0.01, len(starting_values) - 4)
+            
+        elif attempt == 1:
+            # More aggressive values
+            starting_values[0] = 0.8   # quality_own
+            starting_values[1] = 0.5   # quality_sibling
+            starting_values[2] = -0.5  # distance_coeff
+            starting_values[3] = 0.6   # together_bonus_base
+            starting_values[4:] = np.random.normal(0, 0.1, len(starting_values) - 4)
+            
+        else:
+            # Random initialization
+            starting_values[0] = np.random.uniform(0.1, 0.9)   # quality_own
+            starting_values[1] = np.random.uniform(0.1, 0.7)   # quality_sibling
+            starting_values[2] = np.random.uniform(-0.8, -0.1) # distance_coeff
+            starting_values[3] = np.random.uniform(0.1, 0.8)   # together_bonus_base
+            starting_values[4:] = np.random.normal(0, 0.05, len(starting_values) - 4)
+        
+        return starting_values
+    
+    def estimate(self, methods: List[str] = ['BFGS', 'L-BFGS-B', 'Nelder-Mead'], 
+                 maxiter: int = 1000, tolerance: float = 1e-6) -> Dict[str, Any]:
+        """
+        Perform maximum likelihood estimation with multiple methods as fallbacks.
+        
+        Args:
+            methods: List of optimization methods to try in order
             maxiter: Maximum iterations
             tolerance: Convergence tolerance
             
@@ -85,7 +125,8 @@ class PreferenceEstimator:
             Dict: Estimation results
         """
         print(f"Starting maximum likelihood estimation...")
-        print(f"Method: {method}, Max iterations: {maxiter}")
+        print(f"Will try methods in order: {methods}")
+        print(f"Max iterations: {maxiter}")
         print(f"Number of parameters: {self.n_params}")
         print(f"Number of observations: {self.likelihood.n_obs}")
         
@@ -97,73 +138,99 @@ class PreferenceEstimator:
         start_ll = self.likelihood.log_likelihood(x0)
         print(f"Initial log-likelihood: {start_ll:.4f}")
         
-        # Optimize
-        start_time = time.time()
+        # If starting likelihood is terrible, try multiple starting points
+        if start_ll < -1e8:
+            print("Poor starting likelihood, trying alternative starting values...")
+            for attempt in range(3):
+                x0_alt = self.get_alternative_starting_values(attempt)
+                alt_ll = self.likelihood.log_likelihood(x0_alt)
+                print(f"Alternative starting values {attempt}: LL = {alt_ll:.4f}")
+                if alt_ll > start_ll:
+                    x0 = x0_alt
+                    start_ll = alt_ll
+                    print(f"Using alternative starting values {attempt}")
+                    break
         
-        try:
-            if method == 'BFGS':
-                result = optimize.minimize(
-                    self.likelihood.negative_log_likelihood,
-                    x0,
-                    method='BFGS',
-                    options={'maxiter': maxiter, 'gtol': tolerance}
-                )
-            elif method == 'Nelder-Mead':
-                result = optimize.minimize(
-                    self.likelihood.negative_log_likelihood,
-                    x0,
-                    method='Nelder-Mead',
-                    options={'maxiter': maxiter, 'xatol': tolerance}
-                )
-            elif method == 'L-BFGS-B':
-                result = optimize.minimize(
-                    self.likelihood.negative_log_likelihood,
-                    x0,
-                    method='L-BFGS-B',
-                    options={'maxiter': maxiter, 'gtol': tolerance}
-                )
-            else:
-                raise ValueError(f"Unknown optimization method: {method}")
+        result = None
+        
+        # Try each method until one succeeds
+        for method in methods:
+            print(f"\n--- Trying optimization method: {method} ---")
+            
+            start_time = time.time()
+            
+            try:
+                if method == 'BFGS':
+                    result = optimize.minimize(
+                        self.likelihood.negative_log_likelihood,
+                        x0,
+                        method='BFGS',
+                        options={'maxiter': maxiter, 'gtol': tolerance}
+                    )
+                elif method == 'Nelder-Mead':
+                    result = optimize.minimize(
+                        self.likelihood.negative_log_likelihood,
+                        x0,
+                        method='Nelder-Mead',
+                        options={'maxiter': maxiter, 'xatol': tolerance, 'fatol': tolerance}
+                    )
+                elif method == 'L-BFGS-B':
+                    # Add bounds to prevent extreme parameter values
+                    bounds = [(-10, 10)] * self.n_params
+                    result = optimize.minimize(
+                        self.likelihood.negative_log_likelihood,
+                        x0,
+                        method='L-BFGS-B',
+                        bounds=bounds,
+                        options={'maxiter': maxiter, 'gtol': tolerance}
+                    )
+                else:
+                    print(f"Unknown optimization method: {method}")
+                    continue
+                    
+            except Exception as e:
+                print(f"Optimization with {method} failed with error: {e}")
+                continue
                 
-        except Exception as e:
-            print(f"Optimization failed: {e}")
-            result = None
+            estimation_time = time.time() - start_time
+            
+            # Check if this method succeeded
+            if result is not None and result.success:
+                print(f"✓ {method} succeeded!")
+                print(f"Final log-likelihood: {-result.fun:.4f}")
+                print(f"Iterations: {result.nit}")
+                print(f"Time: {estimation_time:.2f} seconds")
+                
+                # Calculate standard errors (approximate)
+                std_errors = self._calculate_standard_errors(result.x)
+                
+                self.results = {
+                    'success': True,
+                    'parameters': result.x,
+                    'parameter_names': self.param_names,
+                    'log_likelihood': -result.fun,
+                    'std_errors': std_errors,
+                    'iterations': result.nit,
+                    'estimation_time': estimation_time,
+                    'method': method,
+                    'convergence_message': result.message
+                }
+                
+                return self.results
+            else:
+                print(f"✗ {method} failed.")
+                if result is not None:
+                    print(f"  Message: {result.message}")
+                    print(f"  Final log-likelihood: {-result.fun:.4f}")
+                
+        # If we get here, all methods failed
+        print(f"\n❌ All optimization methods failed!")
         
-        estimation_time = time.time() - start_time
-        
-        # Process results
-        if result is not None and result.success:
-            print(f"\nOptimization successful!")
-            print(f"Convergence: {result.success}")
-            print(f"Final log-likelihood: {-result.fun:.4f}")
-            print(f"Iterations: {result.nit}")
-            print(f"Estimation time: {estimation_time:.2f} seconds")
-            
-            # Calculate standard errors (approximate)
-            std_errors = self._calculate_standard_errors(result.x)
-            
-            self.results = {
-                'success': True,
-                'parameters': result.x,
-                'parameter_names': self.param_names,
-                'log_likelihood': -result.fun,
-                'std_errors': std_errors,
-                'iterations': result.nit,
-                'estimation_time': estimation_time,
-                'method': method,
-                'convergence_message': result.message
-            }
-            
-        else:
-            print(f"\nOptimization failed!")
-            if result is not None:
-                print(f"Message: {result.message}")
-            
-            self.results = {
-                'success': False,
-                'message': result.message if result is not None else 'Optimization error',
-                'estimation_time': estimation_time
-            }
+        self.results = {
+            'success': False,
+            'message': f'All methods failed. Last message: {result.message if result else "No valid result"}',
+            'estimation_time': 0
+        }
         
         return self.results
     
@@ -329,7 +396,7 @@ def main():
     
     # Run estimation
     print("\n" + "-" * 60)
-    results = estimator.estimate(method='BFGS', maxiter=1000)
+    results = estimator.estimate(maxiter=1000)
     
     # Save results
     print("\n" + "-" * 60)

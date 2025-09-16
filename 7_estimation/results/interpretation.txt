@@ -1,0 +1,17 @@
+INTERPRETATION OF ESTIMATION RESULTS
+==================================================
+
+KEY FINDINGS:
+--------------------
+• Own quality preference: 1.0353
+• Sibling quality preference: 1.0102
+• Distance disutility: 0.3180
+• Together bonus: 0.4981
+
+ECONOMIC INTERPRETATION:
+------------------------------
+• Parents value own child's school quality more than sibling's
+• Unexpected positive distance coefficient
+• Positive preference for keeping siblings together
+
+Note: This interpretation is based on synthetic data for testing purposes.
