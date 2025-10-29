@@ -228,8 +228,9 @@ class ExplodedSiblingLogit:
             log_probs = np.log(probabilities)
             total_ll = np.sum(self.split_vs_joint * log_probs)
             
-            # Check for numerical issues
+            # Final check for numerical issues
             if np.isnan(total_ll) or np.isinf(total_ll):
+                print(f"Invalid total log-likelihood: {total_ll}")
                 return -1e10
             
             return total_ll

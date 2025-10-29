@@ -1,0 +1,9 @@
+Statistic,Value
+Log-likelihood,-9213.7696
+AIC,18453.5392
+BIC,18547.2736
+Observations,"10,000"
+Parameters,13
+Method,L-BFGS-B
+Iterations,39
+Estimation Time (sec),1.66

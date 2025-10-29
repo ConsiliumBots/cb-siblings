@@ -1,0 +1,10 @@
+{
+  "log_likelihood": -9213.769582870782,
+  "n_observations": 10000,
+  "n_parameters": 13,
+  "aic": 18453.539165741564,
+  "bic": 18547.273590577253,
+  "iterations": 39,
+  "estimation_time": 1.664036512374878,
+  "method": "L-BFGS-B"
+}
