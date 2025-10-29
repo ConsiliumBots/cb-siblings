@@ -83,18 +83,6 @@ def load_survey_data() -> pd.DataFrame:
     # Only keep columns that actually exist in the file to avoid KeyError
     keep_cols = [c for c in keep_cols if c in df.columns]
     df = df[keep_cols]
-
-    # If sibl04_1 contains tokens like 'schjoint01', replace with the actual school name/id
-    # Create a dedicated column with the resolved school identifier
-    if 'sibl04_1' in df.columns:
-        df['sibl04_1_name'] = ""
-        schjoint_cols = [c for c in df.columns if c.startswith('schjoint')]
-        for schcol in schjoint_cols:
-            # mark rows where sibl04_1 mentions this schcol (e.g., text contains 'schjoint01')
-            mask = df['sibl04_1'].astype(str).str.contains(schcol, na=False)
-            if mask.any():
-                df.loc[mask, 'sibl04_1_name'] = df.loc[mask, schcol].astype(str)
-
     print(f"Final number of columns: {len(df.columns)}")
     
     return df
