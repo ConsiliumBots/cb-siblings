@@ -1,0 +1,167 @@
+# CB-Siblings Project .gitignore
+
+# ============================================================================
+# Data Files (Confidential - Chilean Administrative Data)
+# ============================================================================
+# All data files should be excluded from version control
+# Data is stored in Dropbox and referenced via paths in 0_main.do
+
+# Stata data files
+*.dta
+
+# CSV data files (raw data, not generated results)
+**/data/*.csv
+
+# Excel data files
+*.xlsx
+*.xls
+
+# SPSS/SAS data files
+*.sav
+*.sas7bdat
+
+# ============================================================================
+# Generated Output Files
+# ============================================================================
+# These are outputs that can be regenerated from code
+
+
+# Report outputs (keep PDFs that are documentation, not generated)
+4_reports/**/*.tex.aux
+4_reports/**/*.tex.log
+4_reports/**/*.tex.out
+
+# ============================================================================
+# Python
+# ============================================================================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# ============================================================================
+# Stata
+# ============================================================================
+# Stata log files
+*.log
+*.smcl
+
+# Stata temporary files
+*.tmp
+
+# ============================================================================
+# R (if used)
+# ============================================================================
+.Rhistory
+.RData
+.Rproj.user
+
+# ============================================================================
+# LaTeX
+# ============================================================================
+*.aux
+*.lof
+*.lot
+*.fls
+*.out
+*.toc
+*.fmt
+*.fot
+*.cb
+*.cb2
+*.lb
+*.synctex.gz
+*.blg
+*.bbl
+
+# ============================================================================
+# Operating System Files
+# ============================================================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# ============================================================================
+# IDE and Editor Files
+# ============================================================================
+# VS Code
+.vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+
+# ============================================================================
+# Temporary and Cache Files
+# ============================================================================
+*.tmp
+*.temp
+*.cache
+*.bak
+*.backup
+
+# ============================================================================
+# EXCEPTIONS - Files to KEEP in version control
+# ============================================================================
+# Keep documentation PDFs
+!2_surveys/questionaries/*.pdf
+!6_model/*.pdf
+
+# Keep example/mock data for testing (if any)
+# !7_estimation/data/example_*.csv
+
+# Keep README files
+!**/README.md
+!**/README.txt
