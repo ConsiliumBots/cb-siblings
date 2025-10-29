@@ -1,0 +1,134 @@
+\documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{booktabs}
+\usepackage{amsmath}
+ \usepackage{multirow}
+ \usepackage{amssymb}
+\usepackage[a4paper, top=1in, bottom=1in, left=1in, right=1in]{geometry}
+\usepackage{tikz}
+\usepackage{hyperref}
+\usepackage{dsfont}
+\usepackage{pifont}% http://ctan.org/pkg/pifont\
+\usepackage{caption}
+\usepackage{natbib}
+\usepackage[normalem]{ulem}
+\newcommand{\stkout}[1]{\ifmmode\text{\sout{\ensuremath{#1}}}\else\sout{#1}\fi}
+
+\newcommand{\xmark}{\ding{55}}%
+
+\setlength{\parskip}{1em} % Adjusts spacing between paragraphs
+\usetikzlibrary{arrows.meta, positioning}
+
+\usepackage[most]{tcolorbox} % Load tcolorbox package
+\tcbuselibrary{listingsutf8}
+
+\newtcolorbox[auto counter, number within=section]{observation}[2][]{colframe=blue!80!black, colback=blue!10, coltitle=white, title={#2}, #1}
+
+\newcommand{\intuitionA}[1]{%
+  \begin{tcolorbox}[breakable, colback=blue!15!white, colframe=blue!25!black]
+#1
+  \end{tcolorbox}
+}
+
+\title{\textbf{Siblings paper} \\ Exploded logit}
+\author{Javiera Gazmuri}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+
+\section{Model}
+
+\subsection{Utility}
+
+\begin{equation}
+    u_{ijk} = \omega_{y} u_{y_ij} + (1-\omega_{y})u_{o_ik} + \gamma \mathds{1}[j = k] + \varepsilon_{ijk}
+\end{equation}
+where $j$ is the school-assignment of the younger children $y$ in family $i$, and $k$ is the school-assignment of the older children $o$. $\omega_{y}$ is the weight that the family places on the utility of the younger children. 
+
+\begin{equation}
+    u_{y_ij} = \beta_{y} dist_{{y_i}j} + \delta_y quality_j  \stkout{ +  \varepsilon_{y_ij}}
+\end{equation}
+
+\begin{equation}
+    u_{o_ik} = \beta_{o} dist_{{o_i}k} + \delta_o quality_k  \stkout{+ \varepsilon_{o_ik}}
+\end{equation}
+
+where $\beta_y$, $\beta_o$, $\delta_y$ and $\delta_o$ are the parameters that govern preferences of the younger and older siblings respectively, and $\varepsilon_{y}$ and $\varepsilon_{o}$ are idiosyncratic i.i.d. preference shocks.
+
+\textcolor{red}{I'm ignoring the distance between schools for now.}
+
+Assumptions:
+\begin{itemize}
+    \item When families report marginal applications, it is like they were only applying to one child.
+    \item $\varepsilon_{ijk}$ are i.i.d. type-I extreme value.
+\end{itemize}
+
+\subsection{Probabilities}
+
+Families with more than one common-school applied were asked between,
+\begin{enumerate}
+    \item[a)] Worst-joint (WJ)
+    \item [b)] Best-older-solo (BOS) and best-younger-solo (BYS)
+\end{enumerate}
+Families with only one common-school applied were asked between,
+\begin{enumerate}
+    \item [a)] ``Best''-joint (BJ)
+    \item [b)] BOS \& BYS
+\end{enumerate}
+
+Let's define, 
+\begin{align*}
+    V_{ijk} \equiv \omega_{y} u_{y_ij} + (1-\omega_{y})u_{o_ik} + \gamma \mathds{1}[j = k]
+\end{align*}
+Hence,
+\begin{align*}
+    V_i^J \equiv V_{ijj} \tag{Assigned together} \\
+    V_i^S \equiv V_{ilk} \tag{Split assignment}
+\end{align*}
+The probability that family $i$ prefers being assigned together is,
+\begin{align*}
+    P_i \equiv \Pr \left[ V_i^J + \varepsilon_{ijj} > V_i^S + \varepsilon_{ilk}  \right] = \frac{\exp\left(V_i^J\right)}{\exp\left(V_i^J\right) + \exp\left(V_i^S\right)}
+\end{align*}
+
+\subsection{Log-likelihood}
+Let \(y_i \in \{0,1 \} \) be the observed answer (1 is prefer joint, 0 is prefer split),
+\[
+L_i (\theta) = P_i^{y_i} (1-P_i)^{1-y_i} \quad, \theta = (\beta_y,\beta_o,\delta_y,\delta_o,\omega_y, \gamma)
+\]
+Assuming independent families \(i = 1,...,N\)
+\begin{align*}
+    \mathcal{L}(\theta) &= \prod^N_{i=1}L_i(\theta) \\
+    \ell(\theta) &= \sum_{i=1}^N y_i \log P_i + (1-y_i) \log (1-P_i)
+\end{align*}
+
+\section{Data}
+
+From survey responses, we have 4 types of schools:
+\begin{enumerate}
+    \item Best-joint (BJ)
+    \item Worst-joint (WJ)
+    \item Best-older-solo (BOS)
+    \item Best-younger-solo (BYS)
+\end{enumerate}
+From application data, we can say:
+\begin{itemize}
+    \item survey showed 10 options max for each, so some lists were trimmed (0,5\% sample approx).
+    \item BOS and BYS: 6\% selected schools were not found in application data.
+\end{itemize}
+Characteristics of schools:
+\begin{itemize}
+    \item Specific for each sibling, even for BJ/WJ (since lat-long not always the same between siblings and between campus, quality depends on grade).
+    \item 3\% - 6\% schools without info of school quality.
+    \item 6\% we don't have information of distance for BOS/BYS
+\end{itemize}
+
+\section{Results}
+
+$N= 9,231$ (from original $12,917$). 
+
+
+
+\end{document}

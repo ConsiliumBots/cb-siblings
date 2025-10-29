@@ -1,0 +1,474 @@
+\documentclass{article}
+
+% Language setting
+% Replace `english' with e.g. `spanish' to change the document language
+\usepackage[english]{babel}
+
+% Set page size and margins
+% Replace `letterpaper' with`a4paper' for UK/EU standard size
+\usepackage[letterpaper,top=2cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+% Useful packages
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{bbm}
+\usepackage{amssymb}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+
+\usepackage{parskip}
+\usepackage[skip=1ex]{parskip}
+
+
+\newcommand{\nacho}[1]{{\color{blue}\textbf{[N:#1]}}}
+\newcommand{\tomas}[1]{{\color{red}\textbf{[T:#1]}}}
+\newcommand{\rakesh}[1]{{\color{green}\textbf{[R:#1]}}}
+\newcommand{\ran}[1]{{\color{brown}\textbf{[R:#1]}}}
+
+\usepackage{tikz}
+\usetikzlibrary{decorations.pathreplacing, positioning, calc}
+
+\title{Siblings' Dynamics Notes}
+\author{Tomas Larroucau}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Notes for Siblings' Dynamics project
+\end{abstract}
+
+\section{Background}
+
+In this document, we describe the problem faced by families who wish to apply to the---nationwide---centralized school-choice system in Chile. We focus on families who have two children applying in the same admission cycle. Therefore, families who have preferences and beliefs over the joint allocation of their children. 
+
+The Chilean system includes several features designed to improve the probability that siblings are assigned together. We now describe how the assignment mechanism in more detail.
+
+\subsection{Application modes and Assignment mechanism}
+
+Parents with two or more children applying in the same admission cycle can choose to apply under the \textit{family application} mode or independently for each child. Under the family application mode, the allocation of the older sibling modifies the preference order of the younger sibling by setting the allocation of the older, to be the top-reported preference of the younger whenever both schools are either listed in both preference orders or are part of their current reserved enrollment (if any). On the other hand, families can choose to apply with each of their children independently, where no change in the reported preference orders is performed.
+
+Conditional on the reported lists of each child, their priorities, and the application mode being selected, the assignment mechanism is a variant of a multiple-tie-breaking (MTB) student-proposing unconstrained DA, where the allocation is computed starting from the highest to the lowest courses. This feature of the assignment mechanism makes it possible for the \textit{family application} mode because the allocation of the older sibling (if applying to a higher course) is known before processing the allocation of the younger sibling. In addition, siblings compete with the same lottery number, therefore,  in the case of two siblings applying for the same course, such as twins, there is a high probability of both of them being assigned to the same school if families submit the same list, even though the family application is not available for such families.
+
+\subsection{Priorities}
+The Chilean mechanism encompasses several priorities that determine the ranking of students in their listed schools. However, regarding joint allocations, it is important to mention two different types of sibling's priorities:
+
+\begin{enumerate}
+    \item \textit{Static Sibling Priority.} The static sibling priority applies whenever a family is applying with a child to a school where one of their siblings is already enrolled. 
+    \item \textit{Dynamic Sibling Priority.} The dynamic sibling priority applies whenever within the current allocation process an older sibling is assigned to a given school in a higher course.
+\end{enumerate}
+
+It is important to note that these priorities apply regardless of the application mode being chosen and, conditional on families' reported preferences, the \textit{family application} mode does not alter the probability of having dynamic priority for the younger sibling at a given school. 
+
+
+\section{Model}\label{sec:model}
+
+In this section, we introduce a model of families' applications to the Chilean centralized school-choice system. We focus on the problem faced by families with two children.
+
+
+\subsection{Dynamic Model}
+
+The preliminary survey results show that families do have dynamic considerations when they apply with more than one sibling. This fact motivates us to think of a dynamic model of joint applications. Let's start with a two-period model. 
+
+\subsubsection{Flow utility}
+Let the flow utility of a family $i \in \mathcal{I}$, over the joint allocation of their children in period $t$ be denoted by $u_{ijkt}$, where $j$ denotes the allocation of the younger children ($y_i$) and $k$ is the allocation of the older sibling ($o_i$). Suppose these preferences can be written as a weighted average over the individual flow utilities of each child being assigned to each school plus some term that connects the allocation of both children. For instance, let's suppose for simplicity that families care only about their children's utilities, the traveling distance to bring them to school, and whether they are assigned to the same school or not:
+
+\begin{equation}
+    u_{ijkt} = \omega_{y} u_{y_ijt} + (1-\omega_{y})u_{o_ikt} - \beta_d \tilde{d}_{ijk} + \gamma \mathbbm{1}_{j = k}
+\end{equation}
+
+where $\omega_{y}$ is the weight that the family places on the utility of the younger children, $\tilde{d_{ijk}}$ id the traveling distance between the families' locations and schools' locations, and 
+
+\begin{equation}
+    u_{y_ijt} = X_{y_ij}\beta_y + \varepsilon_{y_ijt}
+\end{equation}
+
+\begin{equation}
+    u_{o_ikt} = X_{o_ik}\beta_o + \varepsilon_{o_ikt}
+\end{equation}
+
+where $\beta_y$ and $\beta_o$ are the parameters that govern preferences of the younger and older siblings respectively, and $\varepsilon_{y}$ and $\varepsilon_{o}$ are idiosyncratic i.i.d. preference shocks which may have different distributions.
+
+
+\subsubsection{Beliefs}
+
+Conditional on the children's priorities, families form beliefs over the assignment probabilities for each feasible joint allocation of their children as a function of their reported preferences $\left(R_{y_i t}, R_{o_i t} \right)\in \mathcal{R}^2$ and the family application mode being chosen ($fapp \in \lbrace 0, 1 \rbrace$). Let $p_{ijkt}$ be family $i$'s beliefs over the assignment probability of their children at schools $(j,k)$ in period $t$. Abstracting from other priority groups, let $\tau^m_{s_ijt} \in \lbrace 0, 1 \rbrace, \forall s_i\in \lbrace y_i, o_i\rbrace, m \in \lbrace d, s \rbrace $, be the dynamic and static siblings priorities for each sibling in school $j$ at time $t$. Similarly, let the vector of priorities across schools to be denoted by $\vec{\tau}^m_{s_it}$. Then, family $i$'s beliefs over their assignment probabilities at schools $(i,j)$ in period $t$, are given by:
+
+\begin{equation}\label{eq:prob_joint_assignment}
+    p_{ijkt}\left( R_{y_i t}, R_{o_i t}, fapp| \vec{\tau}^{s}_{y_it}, \vec{\tau}^{s}_{o_it} \right) = \mathbb{P} \left( \mu(o_i) = k | R_{o_i t}, \vec{\tau}^{s}_{o_it} \right)\cdot \mathbb{P} \left( \mu(y_i) = j | R_{y_i t}, \vec{\tau}^{s}_{y_it}, \tau^{d}_{y_ikt} = 1, fapp  \right),
+\end{equation}
+
+where $\mu(s_i)\in \mathcal{M}$ identifies the school to which sibling $s_i$ by the mechanism. Notice that families can not condition their optimal application lists as a function of the dynamic priorities because, at the moment of the application, families do not know whether the younger child will have dynamic sibling priority at a given school in the current process, thus, need to form beliefs about them.  
+
+Under the assumption of families having rational expectations over the assignments of their children and letting $R_{o_i t}\left( l \right)\in \mathcal{M}$ being the school listed in preference $l$ in $R_{o_i t}$, we can write the first term in the joint assignment probability in the following manner:
+\begin{equation}
+\mathbb{P} \left( \mu(o_i) = k | R_{o_i t}: R_{o_i t}\left( l \right) = k, \vec{\tau}^{s}_{o_it} \right) = \prod_{r=1}^{l-1} \left(1-p\left(R_{o_it}(r)| \tau^{s}_{o_iR_{o_it}(r)t}\right)\right) p\left(R_{o_it}(l)| \tau^{s}_{o_iR_{o_it}(l)t}\right)
+\end{equation}
+where $p\left(R_{o_it}(r)| \tau^{s}_{o_iR_{o_it}(r)t}\right)$ denotes the probability of sibling $o_i$ of being above the cutoff for school in preference $r$ given her static priority at that school in period $t$. Notice that the multiplicative structure of these probabilities is due to the independence of admission probabilities across schools produced by the MTB lotteries. In a large matching market, each of these probabilities is unaffected by the individual application list. We can similarly write down an expression for the conditional assignment probability of the younger sibling (with some abuse of notation): 
+
+
+{\small
+\begin{align*}
+   &\mathbb{P} \left( \mu(y_i) = j | R_{y_i t}: R_{y_i t}(m) = j, R_{y_i t}: R_{y_i t}(n) = k, \vec{\tau}^{s}_{y_it}, \tau^{d}_{y_ikt} = 1, fapp  \right) =  \\
+   & \begin{cases}
+    (a) \quad p\left(k | \tau^{s}_{y_ikt}, \tau^{d}_{y_ikt} = 1\right)    & \text{ if } fapp = 0, j = k, m = 1\\
+    (b) \quad \prod_{r=1}^{m-1} \left(1-p\left(R_{y_it}(r)| \tau^{s}_{y_iR_{y_it}(r)t}\right)\right) p\left(k | \tau^{s}_{y_ikt}, \tau^{d}_{y_ikt} = 1\right)    & \text{ if } fapp = 0, j = k, m > 1\\
+    (c) \quad p\left(k | \tau^{s}_{y_ikt}, \tau^{d}_{y_ikt} = 1\right)  & \text{ if } fapp = 1, j = k, m\geq 1\\
+    (d) \quad \prod_{r=1}^{m-1} \left(1-p\left(R_{y_it}(r)| \tau^{s}_{y_iR_{y_it}(r)t}\right)\right) p\left(j | \tau^{s}_{y_ijt}\right) & \text{ if } fapp = 0, j \neq k, m < n \\
+    (e) \quad \left( 1 - p\left(k | \tau^{s}_{y_ikt}, \tau^{d}_{y_ikt} = 1\right) \right) \prod_{r=1}^{m-1} \left(1-p\left(R_{y_it}(r)| \tau^{s}_{y_iR_{y_it}(r)t}\right)\right) p\left(j | \tau^{s}_{y_ijt}\right)  & \text{ if } fapp = 1, j \neq k, m < n \\
+    (f) \quad \prod_{r=1}^{n-1} \left(1-p\left(R_{y_it}(r)| \tau^{s}_{y_iR_{y_it}(r)t}\right)\right)  \left(1-p\left(R_{y_it}(n)| \tau^{s}_{y_ikt}, \tau^{d}_{y_ikt} = 1 \right)\right) \cdot \\
+     \quad \quad \quad \prod_{r=n+1}^{m-1} \left(1-p\left(R_{y_it}(r)| \tau^{s}_{y_iR_{y_it}(r)t}\right)\right)  p\left(j | \tau^{s}_{y_ijt}\right) & \text{ if } fapp = 0, j \neq k, m > n \\
+    (g) \quad \left( 1 - p\left(k | \tau^{s}_{y_ikt}, \tau^{d}_{y_ikt} = 1\right) \right) \prod_{r=1}^{n-1} \left(1-p\left(R_{y_it}(r)| \tau^{s}_{y_iR_{y_it}(r)t}\right)\right) \cdot \\
+     \quad \quad \quad \prod_{r=n+1}^{m-1} \left(1-p\left(R_{y_it}(r)| \tau^{s}_{y_iR_{y_it}(r)t}\right)\right) p\left(j | \tau^{s}_{y_ijt}\right) & \text{ if } fapp = 1, j \neq k, m > n 
+    \end{cases} \\
+\end{align*}
+}
+
+%\subsubsection{Application Behavior in the Dynamic model}
+
+
+\subsubsection{Application Behavior and Strategic considerations}
+
+\textit{Static Model without Family Application.} When matching participants have preferences over joint allocations, such us couples or families' over siblings' allocations, allowing them to express their preferences only over marginal allocations might introduce strategic incentives. The following example shows how rational families who care about the travel distance to both assigned schools might be incentivised to misreport their marginal preferences over the allocation of each of their children, probably by excluding some schools and concentrating their reports only on schools that are close to each other. To see this, consider the following Hotelling model of parents' preferences over the distance to each school:
+
+
+
+\vspace{1cm}
+
+
+\begin{tikzpicture}
+
+    % Define the line
+    \draw[thick] (0,0) -- (12,0);
+    
+    % Define points for schools and family
+    \coordinate (C) at (2,0);
+    \coordinate (A) at (3,0);
+    %\coordinate (RE1) at (4.5,0); % RE between A and i
+    \coordinate (I) at (6,0); % Family i
+    %\coordinate (RE2) at (7.5,0); % RE between i and B
+    \coordinate (B) at (9,0);
+    \coordinate (D) at (10,0);
+    \coordinate (RE) at (11,0);
+    
+    % Place nodes for schools
+    \node[below=0.5cm of C] (Clabel) {$C$};
+    \node[below=0.5cm of A] (Alabel) {$A$};
+    %\node[below=0.5cm of RE1] (RE1label) {$R_e$};
+    \node[below=0.5cm of I] (Ilabel) {Family $i$};
+    %\node[below=0.5cm of RE2] (RE2label) {$R_e$};
+    \node[below=0.5cm of B] (Blabel) {$B$};
+    \node[below=0.5cm of D] (Dlabel) {$D$};
+    \node[below=0.5cm of RE] (RElabel) {$R_e$};
+    
+    % Family 'i' position
+    \draw[fill=black] (I) circle (2pt);
+    
+    % Draw curly braces for distances
+    \draw[decorate, decoration={brace, amplitude=5pt, raise=2pt}] (C) -- (A) node[midway, above=0.5cm] {$d_{CA}$};
+    \draw[decorate, decoration={brace, amplitude=5pt, raise=2pt}] (A) -- (I) node[midway, above=0.5cm] {$d_{A}$};
+    \draw[decorate, decoration={brace, amplitude=5pt, raise=2pt}] (I) -- (B) node[midway, above=0.5cm] {$d_{B}$};
+    \draw[decorate, decoration={brace, amplitude=5pt, raise=2pt}] (B) -- (D) node[midway, above=0.5cm] {$d_{BD}$};
+
+    % Draw curly braces for \tilde{d} distances below the schools
+    \draw[decorate, decoration={brace, amplitude=5pt, mirror, raise=4pt}] (Clabel.south) -- (Ilabel.south) node[midway, below=0.1cm] {$\tilde{d}_{iCA}$};
+    \draw[decorate, decoration={brace, amplitude=5pt, mirror, raise=4pt}] (Ilabel.south) -- (Dlabel.south) node[midway, below=0.1cm] {$\tilde{d}_{iDB}$};
+    %\draw[decorate, decoration={brace, amplitude=5pt, mirror, raise=2pt}] (RE1label.south) -- (RE2label.south) node[midway, below=0.1cm] {$\tilde{d}_{iR_eR_e}$};
+        \draw[decorate, decoration={brace, amplitude=5pt, mirror, raise=18pt}] (Ilabel.south) -- (RElabel.south) node[midway, below=0.6cm] {$\tilde{d}_{iR_e}$};
+    \draw[decorate, decoration={brace, amplitude=5pt, mirror, raise=40pt}] (Alabel.south) -- (Blabel.south) node[midway, below=1.4cm] {$\tilde{d}_{iAB}$};
+    
+    % Add Schools label
+    \node[below=0.1cm of $(C)!0.5!(A)$] {Schools};
+    \node[below=0.1cm of $(B)!0.5!(D)$] {Schools};
+    
+    % Place Hotelling Model Label
+    \node[anchor=south, font=\bfseries] at (current bounding box.north) {Hotelling Model over Siblings’ Allocation};
+    
+\end{tikzpicture}
+
+
+\vspace{1cm}
+
+The previous Hotelling model shows how a family might have strategic incentives to misreport their preferences. Let family $i$'s outside option of reserved enrollment be denoted by $R_e$. In addition, assume that each potential joint allocation is equally likely. Under these conditions, although in distance metric $i$'s preferences for an individual child's allocation are such that $A\succ_i D \succ_i R_e$ and $B\succ_i C \succ_i R_e$, they have incentives to exclude from the preference list of both children schools $C$ and $A$ in order to avoid a high traveling distance if they were to be assigned to schools $A$ and $B$ for instance. 
+
+Moreover, in this setting, families can also have incentives to misreport their preferences over schools they have decided to include in their lists. For instance, suppose both siblings have $1/2$ probability of being admitted to $B$ but a probability one of being admitted to $D$. Under this scenario, $i$ might have incentives to rank school $D$ over $B$ for both of them, in order to increase the probability that they are assigned together at $D$ and not only one at $B$ and the other one at $R_e$. 
+
+%\tomas{
+%\textit{Discussion.}
+%\begin{enumerate}
+%    \item We could elicit in the survey whether families indeed excluded some schools as a result of these strategic incentives.
+%    \item If families face these strategic incentives, we should truly to understand which is the type of distance families care about: sum %of distance, maximum distance, travel distance, etc.
+%    \item If families face these strategic incentives, we should discuss whether it is necessary or not to elicit preferences again but unconditional on the reports, in this way we could use the survey answers to estimate the model. Otherwise I think we would have to estimate the model structurally allowing for these strategic incentives. 
+%\end{enumerate}
+%}
+
+\textit{Static Model with Family Application.} The \textit{family application} feature in the Chilean setting still inherits the strategic incentives from not being able to express preferences over joint allocations of the model without it. However, it allows families to choose between two different lotteries conditional on their priorities and reports. Choosing the \textit{family application} increases the probability of both siblings being assigned to the same school by modifying the preference list of the younger sibling in order to maximize the probability of the younger sibling also being assigned to the school that the older sibling was already assigned by the mechanism.     
+
+
+\textit{Dynamic Model with Family Application.} In the dynamic model with family applications, there are additional strategic incentives generated by the uncertainty families might face if they want to reapply to the centralized system. Of particular relevance is the fact that if one of the siblings is assigned to a school in the current process, the other sibling will enjoy the dynamic sibling priority at that school, boosting her assignment probability. To better understand these incentives we proceed to derive the indirect utilities and value functions in the dynamic model.
+
+\subsubsection{Indirect utilities and Value functions}
+
+We start by introducing the indirect utilities and value functions families have. In each period, the state variables are given by the set of priority vectors for each sibling and their current reserved enrollment. The second-period assignment is an absorbing state, therefore, there are no more decisions to be made after period 2. Formally, let the indirect utility family $i$ has of having their children assigned to schools $(j,k)$ in period $t=2$ be:
+
+
+\begin{equation}
+    v_{ijk2} = \omega_{y} u_{y_ij2} + (1-\omega_{y})u_{o_ik2} - \beta_d \tilde{d}_{ijk} + \gamma \mathbbm{1}_{j = k} + \delta V_{ijkT}
+\end{equation}
+
+where $\delta$ is the discount factor and $V_{ijkT}$ is a terminal value function that depends on children's characteristics and their second-period assignment. 
+
+In the first period, family $i$'s indirect utility of being assigned to $(i,j)$ is given by:
+
+\begin{equation}
+    v_{ijk1} = \omega_{y} u_{y_ij1} + (1-\omega_{y})u_{o_ik1} - \beta_d \tilde{d}_{ijk} + \gamma \mathbbm{1}_{j = k} + \delta EmaxJROL\left( j, k \right)
+\end{equation}
+
+where $EmaxJROL\left( j, k \right)$ is given by the expectation over preference shocks of choosing the optimal joint ROLs and the family application mode or not, i.e., 
+
+\begin{equation}
+    EmaxJROL\left( j, k \right) = \mathbb{E}_{\varepsilon_{y}, \varepsilon_{o}}\left[ \max_{\left( R_y, R_o\right), fapp \in \lbrace 0, 1 \rbrace} U_2\left( R_y, R_o, fapp | \mu_1(o) = k, \mu_1(y) = j\right) \right]
+\end{equation}
+
+where $U_2\left( R_y, R_o, fapp | \mu_1(o) = k, \mu_1(y) = j \right)$ is the expected utility over the joint assignment of both siblings.  
+
+\begin{equation}
+    U_2\left( R_y, R_o, fapp | \mu_1(o) = k, \mu_1(y) = j \right) = \sum_{(i',j')\in \mathcal{J}^2}  p_{ij'k'2}\left( \tilde{R}_{y}, \tilde{R}_{o}, fapp| \vec{\tau}^{s}_{y2}, \vec{\tau}^{s}_{o_2} \right) \cdot v_{ij'k'2}
+\end{equation}
+
+where $\tilde{R}_{y}$ and $\tilde{R}_{o}$ are the extended ROLs including at the bottom the reserved enrolments $\mu_1(y) = j$ and $\mu_1(o) = k$ respectively;  $p_{ij'k'2}\left( \cdot \right)$ is the assignment probability of the allocation $(j',k')$ given in Equation \ref{eq:prob_joint_assignment}; and $v_{ij'k'2}$ is the second-period indirect utility of the joint allocation $(j',k')$.  
+
+\subsubsection{Actions}
+
+In each period, family $i$ chooses the optimal joint ROLs to maximize lifetime utility, that is, in period one:
+\begin{equation}
+    \max_{\left( R_y, R_o\right), fapp \in \lbrace 0, 1 \rbrace} U_1\left( R_y, R_o, fapp | \mu_0(o) = k, \mu_0(y) = j \right) = \sum_{(i',j')\in \mathcal{J}^2}  p_{ij'k'1}\left( \tilde{R}_{y}, \tilde{R}_{o}, fapp| \vec{\tau}^{s}_{y1}, \vec{\tau}^{s}_{o_1} \right) \cdot v_{ij'k'1}
+\end{equation}
+Similarly, in period two:
+\begin{equation}
+    \max_{\left( R_y, R_o\right), fapp \in \lbrace 0, 1 \rbrace} U_2\left( R_y, R_o, fapp | \mu_1(o) = k, \mu_1(y) = j \right) = \sum_{(i',j')\in \mathcal{J}^2}  p_{ij'k'1}\left( \tilde{R}_{y}, \tilde{R}_{o}, fapp| \vec{\tau}^{s}_{y2}, \vec{\tau}^{s}_{o_2} \right) \cdot v_{ij'k'2}
+\end{equation}
+
+\tomas{
+\textit{Discussion.} If we want to go full-blown with a dynamic or two-period model, we will face some challenges:
+\begin{enumerate}
+    \item In terms of estimation we would need to find a way to approximate the continuation values given in the term $EmaxJROL(\cdot)$. I am not sure how stable is the allocation to pull off that as a trick as in my JMP. 
+    \item In addition, we need to exploit the structure of the model to simplify finding the optimal solution and get something similar to the One-Shot-Swaps we find with Nacho in Larroucau and Rios (2020). I do not think that the problem is Downward Recursive, but maybe we find something similar to that. Otherwise, by brute force solving the model is going to be hard.
+    \item If we solve the technical issues, we need to take care of identifying  some key elements of the dynamic model:
+   % \begin{enumerate}
+        %\item $\delta$: to identify the discount factor we can exploit the questions we included in the survey about trading being assigned today together at an OK school, versus being assigned separately and then together at the most preferred school in the following year. We can discuss whether it pays off or not to include more quesitons like this in the phone survey.
+       % \item If we were to estimate the entire dynamic model, it is hard to avoid the discussion of learning. Learning will immediately increase the complexity of the model. There are smart ways to do this maybe, like having a new draw of a permanent shock $\xi_{ij}$ only at the school you decided to enroll. I still think we would have to integrate over it, which increases again the numerical complexity of the model. 
+        %\item If we incorporate this type of learning, we now have an additional identification channel on how strategic are families in the beginning and plan ex-ante to re-apply versus they learnt something new and that's why they decided to re-apply in the following year. 
+        %\item We would need to include maybe some question understanding whether the true preferences of families have changed or not, or exploit a panel of repeated respondents from the previous year's survey (if we have observations repeated) to check that. 
+       % \item Finally, we would need to understand what are families learning about in the model. My concern here is that we might inherit the same criticims that the paper of Yusuke Narita faced. A key difference though is that the dynamics and potential learning are really not the main contribution of this paper! it is just to be able to et preferences right and being able to predict counterfactuals more precisely. Maybe we can be agnostic on some dimensions here.  
+   % \end{enumerate}
+\end{enumerate}
+}
+
+
+
+
+\newpage
+
+\section{Interventions}
+
+\tomas{Here we could describe the interventions}
+
+\subsection{Information intervention in 2023}
+
+
+\subsection{Information intervention in 2024}
+
+We plan to elicit information over the following margins:
+
+\begin{enumerate}
+    \item[(i)] True preferences over joint allocations for pairs of schools.
+    \item[(ii)] Preferences over lotteries for pairs of lotteries.
+    \item[(iii)] Beliefs over joint assignment probabilities over different allocations.
+\end{enumerate}
+
+In addition, the admin data contains:
+\begin{enumerate}
+    \item[(iv)] Families marginal reported preferences for each sibling.
+    \item[(v)] Whether or not they chose the family application mode.
+\end{enumerate}
+
+\section{Identification arguments Static model}
+
+In this section, we discuss the identifying information we can obtain with the different data sources and the normalizations we need to impose to identify each utility parameter.
+
+
+\subsection{Normalizations}
+
+There is a question on which are the necessary and innocuous normalization in this setting. In a traditional discrete choice setting, we have to choose two normalizations: a scale normalization and a location normalization. If we think that this is a traditional discrete choice model defined over bundles (independent of what are the assumptions over the distributions of the preference shocks), then we could normalize the scale of the utility by setting $\beta_d = 1$. This would imply that all parameters would be in a distance metric. In addition, we could normalize the value of the outside option, i.e., having both children unassigned, $(\emptyset, \emptyset)$, to 0. 
+
+\tomas{I am not completely sure of this, we should discuss it.}
+
+\subsection{Unobserved preferences}
+
+For simplicity, throughout this section, I assume that $\varepsilon_y$ and $\varepsilon_o$ are i. i. d. type I extreme value shocks with scale parameters $s_y$ and $s_o$ respectively. Later, for estimation, we will modify the distribution of unobserved heterogeneity to be normally distributed. 
+
+\subsection{Data variations}
+
+\textbf{\textit{(i) True preferences over joint allocations for pairs of schools.}}
+
+Suppose we get data from the intervention and/or the survey that allows us to compare two tuples of joint allocations such that
+
+$$(A, B)  \succ (A,C)$$
+
+that is, fixing the allocation of the younger sibling at $A$, the family prefers that the older is assigned to $B$ rather than $C$. This type of comparison will cancel the utilities of the fixed children, due to the separability assumption on the indirect utilities. After some algebra, we can compute the probability that the pair $(A,B)$ is preferred to $(A,C)$ as
+
+\begin{equation}
+    \mathbb{P} \left( (A, B)  \succ (A,C)  \right) =  \mathbb{P} \left( u_{AB} > u_{AC}  \right) = \mathbb{P} \left( \frac{X_{oB}\beta_o - X_{oC}\beta_o - \frac{1}{(1-\omega_y)}\left( \tilde{d}_{AB} - \tilde{d}_{AC}\right)}{s_o} > \varepsilon_{oC} - \varepsilon_{oB} \right) 
+\end{equation}
+
+Now, as we have assumed type I extreme value shocks we would get that
+
+\begin{equation}
+ \mathbb{P} \left( (A, B)  \succ (A,C)  \right) =  \frac{e^{\frac{X_{oB}\beta_o - X_{oC}\beta_o - \frac{1}{(1 - \omega_y)}\left( \tilde{d_{AB}} - \tilde{d_{AC}}\right)}{s_o}}}{1 + e^{\frac{X_{oB}\beta_o - X_{oC}\beta_o - \frac{1}{(1 - \omega_y)}\left( \tilde{d}_{AB} - \tilde{d}_{AC}\right)}{s_o}}} 
+\end{equation}
+
+
+We can do a similar computation but fixing the allocation of the older sibling, for instance we can get that 
+
+\begin{equation}
+ \mathbb{P} \left( (B, A)  \succ (C,A)  \right) =   \frac{e^{\frac{X_{yB}\beta_y - X_{yC}\beta_y - \frac{1}{\omega_y}\left( \tilde{d}_{AB} - \tilde{d}_{AC}\right)}{s_y}}}{1 + e^{\frac{X_{yB}\beta_y - X_{yC}\beta_y - \frac{1}{\omega_y}\left( \tilde{d_{AB}} - \tilde{d}_{AC}\right)}{s_y}}} 
+\end{equation}
+
+To increase power, we can also ask families to choose the top preferred allocation of one sibling, conditional on the other sibling being allocated to a particular school. This version of the question would translate into the following conditional choice probabilities:
+
+\begin{equation}
+    \mathbb{P} \left( (A, B) | \left(A, \cdot \right)  \right) =  \mathbb{P} \left( u_{AB} \geq \max_j u_{Aj}  \right) = \frac{e^{\frac{X_{yB}\beta_y - \frac{\tilde{d}_{AB}}{\omega_y} }{s_y}}}{\sum_j e^{\frac{X_{yj}\beta_y - \frac{\tilde{d}_{Aj}}{\omega_y} }{s_y}}} 
+\end{equation}
+
+
+
+Notice that with these type of comparisons across tuples, we would get that variation in distance would identify in the first case $\frac{1}{s_o(1-\omega_y)}$ and in the second case $\frac{1}{s_y\omega_y}$, so we would have three unknowns and two equations. An additional normalization could be that the scale of the unobserved preference shocks is the same for both the younger and older children,i.e, $s_y = s_o = s$. If we don't do this type of normalizations, we would need some comparisons that do not fix the allocation of one of the children (\tomas{I think}). For instance, we can compute the expression of the probabilities of observing the following comparison:
+
+\begin{equation}
+    (A, B)  \succ (B,A)
+\end{equation}
+
+This type of comparison clearly gives us more information about how much the family cares about each of the siblings. The conditional choice probability will then depend on both $s_y$ and $s_o$. The issue here is that we will get a linear combination of four shocks. Some of them which will be weighted by the parameter $\omega_y$. This will change the variance of the type I extreme value shocks and the logit formula won't be valid anymore (they won't have a logit distribution). Therefore, under the current simple model, if we want to extract information from those type of comparisons, we would need a different distributional assumption, for instance, that errors are normally distributed. 
+
+
+\subsubsection{Comparison with fictitious nearby school}
+
+Let's consider an alternative normalization for each utility function, let's suppose we can write the utilities as depending on some numeraire that is continuous, for instance, the quality of the school measured by the average SIMCE score (or something like this), that is, 
+
+\begin{equation}
+    u_{yj} = X_{yj}\beta_y + s_j + \varepsilon_{yj}
+\end{equation}
+
+\begin{equation}
+    u_{ok} = X_{ok}\beta_o + s_k + \varepsilon_{ok}
+\end{equation}
+
+where $\beta_y$ and $\beta_o$ are the parameters that govern preferences of the younger and older siblings respectively, and $\varepsilon_{y}$ and $\varepsilon_{o}$ are idiosyncratic i.i.d preference shocks which may have different distributions.  
+
+Now, the call-center question asks about whether they prefer both children being assigned together at school $A$, versus being assigned to a fictitious school $B$ that has the same characteristics, but it is two blocks away (same distance), and has a 10\% higher SIMCE score would give us the following CCP:
+
+
+\begin{align*}
+    \mathbb{P} \left( (A, A)  \succ (A,B)  \right) &=  \mathbb{P} \left( u_{AA} > u_{AB}  \right) \\
+    &=  \mathbb{P} \left(  \gamma - (1-\omega_y)(1.1 s_A - s_A) > \varepsilon_{oB} - \varepsilon_{oA} \right)  \\
+     &=  \mathbb{P} \left(  \gamma - 0.1(1-\omega_y)s_A > \varepsilon_{oB} - \varepsilon_{oA} \right)  \\
+     &=  \frac{e^{\gamma - 0.1(1-\omega_y)s_A}}{1 + e^{\gamma - 0.1(1-\omega_y)s_A}} \\
+\end{align*}
+where here I am assuming we have already identified the scale parameters in the error terms and normalized them. Similarly, for the younger we can get:
+\begin{align*}
+    \mathbb{P} \left( (A, A)  \succ (B,A)  \right) &=  \mathbb{P} \left( u_{AA} > u_{BA}  \right) \\
+    &=  \mathbb{P} \left(  \gamma - \omega_y(1.1 s_A - s_A) > \varepsilon_{yB} - \varepsilon_{yA} \right)  \\
+     &=  \mathbb{P} \left(  \gamma - 0.1\omega_y s_A > \varepsilon_{yB} - \varepsilon_{yA} \right)  \\
+     &=  \frac{e^{\gamma - 0.1\omega_ys_A}}{1 + e^{\gamma - 0.1\omega_y s_A}} \\
+\end{align*}
+
+These CCPs show that with this type of question and proper normalization, we could identify both $\gamma$ and $\omega_y$ in terms of the SIMCE score numeraire (we have two equations and two unknowns). 
+
+\subsubsection{Comparison between being together at worse school and separate at top schools}
+
+Suppose the family has the following order of schools for each marginal report:
+
+\begin{equation}
+    A \succ B \succ C.
+\end{equation}
+
+In the surveys, we ask the family whether they prefer being assigned together to the least preferred school, or separately but to the most preferred schools, i.e.:
+
+\begin{equation}
+    (C,C) \succ (A, B)
+\end{equation}
+
+This comparison would lead to the following type of CCP:
+
+\begin{align*}
+    \mathbb{P} \left( (C, C)  \succ (A,B)  \right) &=  \mathbb{P} \left( u_{CC} > u_{AB}  \right) \\
+    &= \mathbb{P} ( \omega_y X_{yC}\beta_y  + (1-\omega_y) X_{oC}\beta_o - \omega_y X_{yA}\beta_y - (1 - \omega_y) X_{yB}\beta_y - \left( \tilde{d}_{CC} - \tilde{d}_{AB}\right) + \gamma \\
+    & > \omega_y \varepsilon_{yC} + (1 - \omega_y) \varepsilon_{oC} - \omega_y \varepsilon_{yA} - (1 - \omega_y) \varepsilon_{yB} ) 
+\end{align*}
+
+This type of comparison gives us information about how much the family cares about both siblings being assigned together ($\gamma$), irrespective of the travel distance. Note that the conditional choice probability depends on a linear combination of four shocks weighted by the parameter $\omega_y$. This will change the variance of the type I extreme value shocks and the logit formula won't be valid anymore (they won't have a logit distribution). Therefore, under the current simple model, if we want to extract information from those types of comparisons, we would need a different distributional assumption, for instance, that errors are normally distributed. 
+
+\textbf{\textit{(ii) Preferences over lotteries for pairs of lotteries.}}
+
+In the 2024 intervention, we plan to ask families to declare their preference between two lotteries over joint allocations. For instance, suppose the family has to choose between lottery $\Gamma_{R_y, R_o, fapp=1}$ and $\Gamma_{R'_y, R'_o, fapp=0}$ and chooses:
+
+\begin{equation}
+    \Gamma_{R_y, R_o, fapp=1} \succ \Gamma_{R'_y, R'_o, fapp=0}.
+\end{equation}
+
+Then we know that this implies in expected utility terms that:
+
+\begin{align*}
+    & \Gamma_{R_y, R_o, fapp=1} \succ \Gamma_{R'_y, R'_o, fapp=0} \\
+    & \iff U(R_y, R_o, fapp=1) \geq U(R'_y, R'_o, fapp=0) 
+\end{align*}
+
+From Section \ref{sec:model}, we know that the expected utility of reporting marginal preferences and choosing or not the family application is still linear on the utilities, thus we can write the system of inequalities:
+
+\begin{equation}
+    \left( \tilde{\Gamma}_{R_y, R_o, fapp=1} -  \tilde{\Gamma}_{R'_y, R'_o, fapp=0} \right) u \geq 0
+\end{equation}
+
+where $u$ denotes the vector of utilities over joint allocations and the lotteries are written as row vectors encoding the probabilities over each joint allocation. A useful implication of this formulation is that it fits in the structure of the Gibbs Sampler estimation approach. In addition, making families choose between pairs of lotteries, can give us information about their cardinal utilities, without having to solve the complicated optimization problem of choosing an optimal pair of two marginal reports and the family application. 
+
+\textbf{\textit{(iii) Preferences over lotteries for pairs of lotteries, (iv) families marginal reported preferences for each sibling, and (v) whether or not they chose the family application mode.}}
+
+We could also use the admin data of which marginal preferences the family chose and whether they chose or not the family application. Here, depending on what we assume for the family's strategic behavior, there are several options: 
+
+\textit{Marginal-Truthtellers.} From the surveys, we can identify whether families would have applied with the same portfolios if they had only one child. Call these families, \textit{marginal-truthtellers}. For these families, we could interpret the order of schools in each of the marginal reports, as the true preference order over the marginal assignment for each child. For instance, if a family reported:
+
+\begin{equation}
+    A \succ_y B 
+\end{equation}
+
+This could imply that:
+
+\begin{equation}
+    u_{yA} \geq u_{yB}  
+\end{equation}
+
+which would help us identify the preference parameters within each child's utility function (although not the preference weights, nor the parameter $gamma$).
+
+\textit{Strategic.} If we assume that students are fully strategic or we use the surveys to identify them, the reported preferences would imply that under their implied lottery, the family is maximizing their expected utility. For this, it could be useful to have the data on families' subjective beliefs, if we think we can use them instead of rational expectations. The challenge of using this information for identification and estimation is that we would need to construct a system of inequalities where each row looks like this:
+
+\begin{equation}
+    \left( \tilde{\Gamma}_{R_y, R_o, fapp} -  \tilde{\Gamma}_{R'_y, R'_o, fapp'} \right) u \geq 0, \quad \forall R'_y, R'_o, fapp'
+\end{equation}
+
+For this, we would need to think with Nacho if we can decrease the set of comparisons by exploiting some properties of the allocation and the admission probabilities. Alternatively, we could reduce significantly the choice set of families by building consideration sets or assuming they only consider for these comparisons the already listed programs.
+
+\tomas{Let's talk about this!}
+
+\subsection{Measurement error}
+
+The way I think we could model measurement error, is by assuming that with some probability, $p_m$, the family incorrectly answers in the intervention which allocation (or lottery) they prefer. In this way, we can impose one set of inequalities or the other one with that probability. We can estimate the probability, doing the analog of the mixtures for strategic types in Agarwal and Somaini (2018). My intuition in what really identifies this probability in the data, is the consistency between these reported preferences in the survey or intervention and the reported preferences in the real application. For instance, if there is a high measurement error, we should observe a lot of inconsistencies between these preferences (choice reversals).
+
+In any case, I would start the estimation of the model without measurement error.
+
+\section{Estimation}
+
+Given that all moments imply linear restrictions on the utility parameters, I think an obvious candidate for an estimation approach is to adapt the Gibbs Sampler and impose the restrictions (with measurement error if we want to be more sophisticated).
+
+
+\end{document}
+
