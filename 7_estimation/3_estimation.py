@@ -2,10 +2,10 @@
 Maximum Likelihood Estimation Script
 
 This script performs maximum likelihood estimation of the preference parameters
-and saves the results.
+for the simplified sibling choice model with only together_bonus parameter.
 
-Author: Preference Estimation Framework
-Date: 2024
+Author: Javiera Gazmuri
+Date: Oct 2025
 """
 
 import numpy as np
@@ -14,329 +14,179 @@ from scipy import optimize
 import json
 import time
 import os
-from typing import Dict, Tuple, Any
+from typing import Dict, Any
 
 import sys
-import os
 sys.path.append(os.path.dirname(__file__))
-from likelihood_functions import ExplodedLogitLikelihood
+from likelihood_functions import ExplodedSiblingLogit
 
 class PreferenceEstimator:
-    """
-    Maximum likelihood estimator for preference parameters.
-    """
-    
-    def __init__(self, data: pd.DataFrame, covariates: pd.DataFrame):
-        """
-        Initialize estimator.
-        
-        Args:
-            data: Survey response data
-            covariates: Covariate matrix
-        """
-        self.likelihood = ExplodedLogitLikelihood(data, covariates)
-        self.n_params = 4 + len(self.likelihood.covariate_names)
-        
-        # Parameter names for results
+    def __init__(self, data):
+        self.likelihood = ExplodedSiblingLogit(data)
+        # New parameterization: [beta_y_q, beta_y_d, beta_o_q, beta_o_d, omega_y, gamma]
         self.param_names = [
-            'quality_own',
-            'quality_sibling', 
-            'distance_coeff',
-            'together_bonus_base'
-        ] + [f'together_bonus_{name}' for name in self.likelihood.covariate_names]
-        
+            "beta_y_q", "beta_y_d", "beta_o_q", "beta_o_d", "omega_y", "gamma"
+        ]
+        # Compute complete-case N matching test_likelihood_function (qualities==0 treated as missing)
+        self.complete_n = self._compute_complete_n()
+        # Overwrite likelihood.n_obs for reporting to match complete-case count
+        try:
+            self.likelihood.n_obs = int(self.complete_n)
+        except Exception:
+            pass
         self.results = None
+
+    def _compute_complete_n(self) -> int:
+        """Compute number of observations with non-missing covariates used in utilities.
+
+        Mirrors the logic in test_likelihood_function: treats quality==0 as missing and
+        selects joint covariates depending on `cant_common_rbd`.
+        """
+        df = self.likelihood.data.copy()
+        # Required covariate columns (same as in likelihood_functions test)
+        required = [
+            'qual_bos_young', 'dist_km_bos_young', 'qual_bos_old', 'dist_km_bos_old',
+            'qual_wj_young', 'dist_km_wj_young', 'qual_wj_old', 'dist_km_wj_old',
+            'qual_bj_young', 'dist_km_bj_young', 'qual_bj_old', 'dist_km_bj_old',
+        ]
+        missing_cols = [c for c in required if c not in df.columns]
+        if missing_cols:
+            print(f"Warning: missing covariate columns, complete-case N set to 0: {missing_cols}")
+            return 0
+
+        # Normalize empty strings to NaN
+        df = df.replace('', np.nan)
+        multi_mask = df['cant_common_rbd'] > 1
+
+        # Select joint covariates per-row
+        qual_joint_y = pd.Series(np.where(multi_mask, df['qual_wj_young'], df['qual_bj_young']), index=df.index)
+        dist_joint_y = pd.Series(np.where(multi_mask, df['dist_km_wj_young'], df['dist_km_bj_young']), index=df.index)
+        qual_joint_o = pd.Series(np.where(multi_mask, df['qual_wj_old'], df['qual_bj_old']), index=df.index)
+        dist_joint_o = pd.Series(np.where(multi_mask, df['dist_km_wj_old'], df['dist_km_bj_old']), index=df.index)
+
+        qual_y_split = df['qual_bos_young']
+        dist_y_split = df['dist_km_bos_young']
+        qual_o_split = df['qual_bos_old']
+        dist_o_split = df['dist_km_bos_old']
+
+        # Treat quality==0 as missing
+        qual_y_split = qual_y_split.replace(0, np.nan)
+        qual_o_split = qual_o_split.replace(0, np.nan)
+        qual_joint_y = qual_joint_y.replace(0, np.nan)
+        qual_joint_o = qual_joint_o.replace(0, np.nan)
+
+        complete_mask = (
+            qual_y_split.notna() & dist_y_split.notna() &
+            qual_o_split.notna() & dist_o_split.notna() &
+            qual_joint_y.notna() & dist_joint_y.notna() &
+            qual_joint_o.notna() & dist_joint_o.notna()
+        )
+
+        return int(complete_mask.sum())
+        
+    def get_starting_values(self):
+        # Sensible starting values based on the test harness
+        return np.array([1.0, -0.1, 1.0, -0.1, 0.5, 0.8])
     
-    def get_starting_values(self) -> np.ndarray:
-        """
-        Generate reasonable starting values for optimization.
-        
-        Returns:
-            np.ndarray: Starting parameter vector
-        """
-        starting_values = np.zeros(self.n_params)
-        
-        # Quality preferences (positive)
-        starting_values[0] = 0.5  # quality_own
-        starting_values[1] = 0.3  # quality_sibling
-        
-        # Distance disutility (negative)
-        starting_values[2] = -0.2  # distance_coeff
-        
-        # Together bonus (positive)
-        starting_values[3] = 0.4  # together_bonus_base
-        
-        # Covariate effects (small random values)
-        starting_values[4:] = np.random.normal(0, 0.05, len(starting_values) - 4)
-        
-        return starting_values
-    
-    def estimate(self, method: str = 'BFGS', maxiter: int = 1000, 
-                 tolerance: float = 1e-6) -> Dict[str, Any]:
-        """
-        Perform maximum likelihood estimation.
-        
-        Args:
-            method: Optimization method
-            maxiter: Maximum iterations
-            tolerance: Convergence tolerance
-            
-        Returns:
-            Dict: Estimation results
-        """
-        print(f"Starting maximum likelihood estimation...")
-        print(f"Method: {method}, Max iterations: {maxiter}")
-        print(f"Number of parameters: {self.n_params}")
-        print(f"Number of observations: {self.likelihood.n_obs}")
-        
-        # Get starting values
+    def estimate(self, method="Nelder-Mead", maxiter=1000):
+        print("Starting estimation...")
         x0 = self.get_starting_values()
-        print(f"Starting values: {x0}")
         
-        # Test likelihood at starting values
         start_ll = self.likelihood.log_likelihood(x0)
         print(f"Initial log-likelihood: {start_ll:.4f}")
         
-        # Optimize
-        start_time = time.time()
-        
         try:
-            if method == 'BFGS':
-                result = optimize.minimize(
-                    self.likelihood.negative_log_likelihood,
-                    x0,
-                    method='BFGS',
-                    options={'maxiter': maxiter, 'gtol': tolerance}
-                )
-            elif method == 'Nelder-Mead':
-                result = optimize.minimize(
-                    self.likelihood.negative_log_likelihood,
-                    x0,
-                    method='Nelder-Mead',
-                    options={'maxiter': maxiter, 'xatol': tolerance}
-                )
-            elif method == 'L-BFGS-B':
-                result = optimize.minimize(
-                    self.likelihood.negative_log_likelihood,
-                    x0,
-                    method='L-BFGS-B',
-                    options={'maxiter': maxiter, 'gtol': tolerance}
-                )
-            else:
-                raise ValueError(f"Unknown optimization method: {method}")
-                
-        except Exception as e:
-            print(f"Optimization failed: {e}")
-            result = None
-        
-        estimation_time = time.time() - start_time
-        
-        # Process results
-        if result is not None and result.success:
-            print(f"\nOptimization successful!")
-            print(f"Convergence: {result.success}")
-            print(f"Final log-likelihood: {-result.fun:.4f}")
-            print(f"Iterations: {result.nit}")
-            print(f"Estimation time: {estimation_time:.2f} seconds")
+            # Use bounds to constrain omega_y to [0,1]. We'll use L-BFGS-B by default
+            # unless the user explicitly requests another method.
+            bounds = [
+                (None, None),  # beta_y_q
+                (None, None),  # beta_y_d
+                (None, None),  # beta_o_q
+                (None, None),  # beta_o_d
+                (0.0, 1.0),    # omega_y (weight between 0 and 1)
+                (None, None),  # gamma (joint bonus)
+            ]
+
+            opt_method = method if method is not None else "L-BFGS-B"
+            if opt_method == "Nelder-Mead":
+                # Nelder-Mead does not support bounds; warn and run unbounded
+                print("Warning: Nelder-Mead ignores bounds. Consider using 'L-BFGS-B' to enforce 0<=omega_y<=1.")
+
+            result = optimize.minimize(
+                fun=self.likelihood.negative_log_likelihood,
+                x0=x0,
+                method="L-BFGS-B",
+                bounds=bounds,
+                options={"maxiter": maxiter}
+            )
             
-            # Calculate standard errors (approximate)
-            std_errors = self._calculate_standard_errors(result.x)
+            self.results = result
+            print(f"\nSuccess: {result['success']}")
+            print(f"Final log-likelihood: {-result['fun']:.4f}")
+            # Print all estimated parameters with names
+            est = result['x']
+            for name, val in zip(self.param_names, est):
+                print(f"Estimated {name}: {val:.6f}")
             
-            self.results = {
-                'success': True,
-                'parameters': result.x,
-                'parameter_names': self.param_names,
-                'log_likelihood': -result.fun,
-                'std_errors': std_errors,
-                'iterations': result.nit,
-                'estimation_time': estimation_time,
-                'method': method,
-                'convergence_message': result.message
-            }
-            
-        else:
-            print(f"\nOptimization failed!")
-            if result is not None:
-                print(f"Message: {result.message}")
-            
-            self.results = {
-                'success': False,
-                'message': result.message if result is not None else 'Optimization error',
-                'estimation_time': estimation_time
-            }
-        
-        return self.results
-    
-    def _calculate_standard_errors(self, params: np.ndarray) -> np.ndarray:
-        """
-        Calculate approximate standard errors using numerical Hessian.
-        
-        Args:
-            params: Estimated parameters
-            
-        Returns:
-            np.ndarray: Standard errors
-        """
-        print("Calculating standard errors...")
-        
-        try:
-            # Calculate numerical Hessian
-            hessian = self._numerical_hessian(params)
-            
-            # Standard errors from inverse Hessian diagonal
-            inv_hessian = np.linalg.inv(hessian)
-            std_errors = np.sqrt(np.diag(inv_hessian))
-            
-            return std_errors
+            return result
             
         except Exception as e:
-            print(f"Warning: Could not calculate standard errors: {e}")
-            return np.full(len(params), np.nan)
+            print(f"Error in estimation: {e}")
+            return None
     
-    def _numerical_hessian(self, params: np.ndarray, eps: float = 1e-5) -> np.ndarray:
-        """
-        Calculate numerical Hessian matrix.
-        
-        Args:
-            params: Parameter vector
-            eps: Step size for numerical differentiation
-            
-        Returns:
-            np.ndarray: Hessian matrix
-        """
-        n = len(params)
-        hessian = np.zeros((n, n))
-        
-        for i in range(n):
-            for j in range(n):
-                if i == j:
-                    # Second derivative
-                    params_plus = params.copy()
-                    params_minus = params.copy()
-                    params_plus[i] += eps
-                    params_minus[i] -= eps
-                    
-                    hessian[i, j] = (
-                        self.likelihood.negative_log_likelihood(params_plus) +
-                        self.likelihood.negative_log_likelihood(params_minus) -
-                        2 * self.likelihood.negative_log_likelihood(params)
-                    ) / (eps ** 2)
-                else:
-                    # Cross derivative
-                    params_pp = params.copy()
-                    params_pm = params.copy()
-                    params_mp = params.copy()
-                    params_mm = params.copy()
-                    
-                    params_pp[i] += eps; params_pp[j] += eps
-                    params_pm[i] += eps; params_pm[j] -= eps
-                    params_mp[i] -= eps; params_mp[j] += eps
-                    params_mm[i] -= eps; params_mm[j] -= eps
-                    
-                    hessian[i, j] = (
-                        self.likelihood.negative_log_likelihood(params_pp) -
-                        self.likelihood.negative_log_likelihood(params_pm) -
-                        self.likelihood.negative_log_likelihood(params_mp) +
-                        self.likelihood.negative_log_likelihood(params_mm)
-                    ) / (4 * eps ** 2)
-        
-        return hessian
-    
-    def save_results(self) -> None:
-        """Save estimation results to files."""
+    def save_results(self):
         if self.results is None:
-            print("No results to save. Run estimation first.")
             return
+        est = self.results["x"]
+        results_dict: Dict[str, Any] = {
+            "params": {name: float(val) for name, val in zip(self.param_names, est)},
+            "log_likelihood": float(-self.results["fun"]),
+            "success": bool(self.results["success"]),
+            "n_obs": int(self.likelihood.n_obs)
+        }
         
-        os.makedirs('results', exist_ok=True)
+        os.makedirs("results", exist_ok=True)
+        with open("results/estimation_results.json", "w") as f:
+            json.dump(results_dict, f, indent=4)
         
-        if self.results['success']:
-            # Save parameter estimates
-            param_df = pd.DataFrame({
-                'parameter': self.results['parameter_names'],
-                'estimate': self.results['parameters'],
-                'std_error': self.results['std_errors'],
-                't_stat': self.results['parameters'] / self.results['std_errors']
-            })
-            param_df.to_csv('results/parameter_estimates.csv', index=False)
-            
-            # Save estimation summary
-            summary = {
-                'log_likelihood': self.results['log_likelihood'],
-                'n_observations': self.likelihood.n_obs,
-                'n_parameters': self.n_params,
-                'aic': -2 * self.results['log_likelihood'] + 2 * self.n_params,
-                'bic': -2 * self.results['log_likelihood'] + self.n_params * np.log(self.likelihood.n_obs),
-                'iterations': self.results['iterations'],
-                'estimation_time': self.results['estimation_time'],
-                'method': self.results['method']
-            }
-            
-            with open('results/estimation_summary.json', 'w') as f:
-                json.dump(summary, f, indent=2)
-            
-            # Save text summary
-            with open('results/estimation_summary.txt', 'w') as f:
-                f.write("PREFERENCE ESTIMATION RESULTS\n")
-                f.write("=" * 50 + "\n\n")
-                f.write(f"Log-likelihood: {summary['log_likelihood']:.4f}\n")
-                f.write(f"AIC: {summary['aic']:.4f}\n")
-                f.write(f"BIC: {summary['bic']:.4f}\n")
-                f.write(f"Observations: {summary['n_observations']}\n")
-                f.write(f"Parameters: {summary['n_parameters']}\n")
-                f.write(f"Method: {summary['method']}\n")
-                f.write(f"Iterations: {summary['iterations']}\n")
-                f.write(f"Time: {summary['estimation_time']:.2f} seconds\n\n")
-                
-                f.write("PARAMETER ESTIMATES\n")
-                f.write("-" * 50 + "\n")
-                for _, row in param_df.iterrows():
-                    f.write(f"{row['parameter']:20s}: {row['estimate']:8.4f} ({row['std_error']:6.4f})\n")
-            
-            print("Results saved successfully!")
-            print(f"Parameter estimates: results/parameter_estimates.csv")
-            print(f"Estimation summary: results/estimation_summary.txt")
-            
-        else:
-            # Save failure information
-            with open('results/estimation_failed.txt', 'w') as f:
-                f.write("ESTIMATION FAILED\n")
-                f.write("=" * 30 + "\n\n")
-                f.write(f"Message: {self.results['message']}\n")
-                f.write(f"Time: {self.results['estimation_time']:.2f} seconds\n")
-            
-            print("Estimation failed. Failure information saved to results/estimation_failed.txt")
+        # Also export a simple LaTeX table with parameter estimates
+        tex_path = os.path.join("results", "estimation_results.tex")
+        try:
+            with open(tex_path, "w") as tf:
+                tf.write("% Auto-generated LaTeX table of estimation results\n")
+                tf.write("\\begin{table}[ht]\n\\centering\n")
+                tf.write("\\begin{tabular}{lr}\n\\hline\n")
+                tf.write("Parameter & Estimate \\\\ \n\\hline\n")
+                for name, val in zip(self.param_names, est):
+                    tf.write(f"{name} & {float(val):.6f} \\\\ \n")
+                tf.write("\\hline\n\\end{tabular}\n")
+                # Add a small caption with fit statistics
+                tf.write(f"\\caption{{Estimated parameters (log-likelihood={results_dict['log_likelihood']:.3f}, n={results_dict['n_obs']})}}\\n")
+                tf.write("\\label{tab:estimation_results}\n\\end{table}\n")
+            print(f"LaTeX table written to {tex_path}")
+        except Exception as e:
+            print(f"Warning: could not write LaTeX results file: {e}")
 
 def main():
-    """Main execution function."""
     print("=" * 60)
-    print("PREFERENCE ESTIMATION: Maximum Likelihood")
+    print("PREFERENCE ESTIMATION")
     print("=" * 60)
     
-    # Load data
     try:
-        print("Loading data...")
-        data = pd.read_csv('data/survey_responses.csv')
-        covariates = pd.read_csv('data/covariates.csv')
+        data = pd.read_csv("data/survey_responses.csv")
         print(f"Loaded {len(data)} observations")
-    except FileNotFoundError as e:
-        print(f"Data files not found: {e}")
+    except FileNotFoundError:
         print("Please run 1_load_data.py first.")
         return
     
-    # Initialize estimator
-    estimator = PreferenceEstimator(data, covariates)
+    estimator = PreferenceEstimator(data)
+    results = estimator.estimate()
     
-    # Run estimation
-    print("\n" + "-" * 60)
-    results = estimator.estimate(method='BFGS', maxiter=1000)
+    if results is not None and results["success"]:
+        estimator.save_results()
+        print("\nResults saved to results/estimation_results.json")
     
-    # Save results
-    print("\n" + "-" * 60)
-    estimator.save_results()
-    
-    print("\n" + "=" * 60)
-    print("Maximum likelihood estimation completed!")
+    print("\nEstimation completed!")
     print("=" * 60)
 
 if __name__ == "__main__":

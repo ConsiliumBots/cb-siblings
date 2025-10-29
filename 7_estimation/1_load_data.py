@@ -4,148 +4,119 @@ Data Loading and Preprocessing Script
 This script loads survey response data on preferences over joint allocations
 and formats it for likelihood estimation.
 
-Author: Preference Estimation Framework
-Date: 2024
+Author: Javiera Gazmuri
+Date: Oct 2025
 """
+# %%
 
 import numpy as np
 import pandas as pd
 import os
 from typing import Tuple, Dict, Any
 
+""""
+NOTAS:
+1) Agregar covariates (con y sin distancia):
+- Distance (distancias marginales y between)
+- Cosas de la cartilla (promedio para split)
+
+Resp:
+- Survey: id_postulante, id_apoderado
+- School data: 'SAE 2023/cartillas/cartillas_postulación/1_etapa_regular/4_research_tables/oferta/options_feedback_2023_08_28.csv'
+- Applicant data: 'SAE 2023/cartillas/cartillas_postulación/1_etapa_regular/4_research_tables/applications/datos_jpal/datos_jpal_2023_08_28.csv'
+
+"""
+from path_config import APPLICANTS, BASE_PATH, PROGRAMS, SURVEY_FILE
+
+#applicants = pd.read_csv(APPLICANTS)
+#applicants = applicants[['id_postulante', 'id_apoderado', 'orden', 'rbd', 'cod_curso']]
+
+#programs = pd.read_csv(PROGRAMS)
+#programs = programs[['campus_name', 'rbd','cod_curso', 'sch_lon','sch_lat','quality_category_label']]
+
+#app_programs = applicants.merge(programs, on = ['rbd','cod_curso'], how = 'left') # All merge 
+
+
+
 def load_survey_data() -> pd.DataFrame:
     """
     Load survey data on preferences over joint allocations.
     
-    If original data is not available, generates synthetic data for testing.
-    
     Returns:
         pd.DataFrame: Cleaned survey response data
     """
-    # Try to load actual survey data first
-    survey_path = "../2_surveys/questionaries/"
-    
-    # Check if we have access to the actual survey data files
-    if os.path.exists(survey_path):
-        print("Survey data folder found, but no specific data files detected.")
-        print("Generating synthetic data for testing purposes...")
-    else:
-        print("Survey data folder not accessible. Generating synthetic data...")
-    
-    # Generate synthetic survey data for testing
-    np.random.seed(42)  # For reproducibility
-    
-    n_respondents = 1000
-    n_choices_per_respondent = 10
-    
-    # Create synthetic survey responses
-    data = []
-    
-    for respondent_id in range(n_respondents):
-        # Generate respondent characteristics
-        household_size = np.random.choice([2, 3, 4, 5], p=[0.1, 0.4, 0.4, 0.1])
-        income_category = np.random.choice(['low', 'medium', 'high'], p=[0.3, 0.5, 0.2])
-        parent_education = np.random.choice(['primary', 'secondary', 'tertiary'], p=[0.2, 0.5, 0.3])
-        
-        # Generate choice scenarios for this respondent
-        for choice_id in range(n_choices_per_respondent):
-            # School characteristics for pair (school_i, school_j)
-            school_i_quality = np.random.normal(0, 1)
-            school_j_quality = np.random.normal(0, 1)
-            
-            school_i_distance = np.random.exponential(2)
-            school_j_distance = np.random.exponential(2)
-            
-            # Joint allocation options
-            # Option 1: Both siblings to school i
-            # Option 2: Both siblings to school j  
-            # Option 3: Sibling 1 to school i, Sibling 2 to school j
-            # Option 4: Sibling 1 to school j, Sibling 2 to school i
-            
-            # Calculate utilities (for synthetic data generation)
-            # Together bonus
-            together_bonus = 0.5
-            
-            # Utility components
-            utility_base_i = school_i_quality - 0.3 * school_i_distance
-            utility_base_j = school_j_quality - 0.3 * school_j_distance
-            
-            # Option utilities
-            u_both_i = 2 * utility_base_i + together_bonus + np.random.gumbel()
-            u_both_j = 2 * utility_base_j + together_bonus + np.random.gumbel()
-            u_split_ij = utility_base_i + utility_base_j + np.random.gumbel()
-            u_split_ji = utility_base_i + utility_base_j + np.random.gumbel()
-            
-            utilities = np.array([u_both_i, u_both_j, u_split_ij, u_split_ji])
-            chosen_option = np.argmax(utilities)
-            
-            # Store data
-            data.append({
-                'respondent_id': respondent_id,
-                'choice_id': choice_id,
-                'household_size': household_size,
-                'income_category': income_category,
-                'parent_education': parent_education,
-                'school_i_quality': school_i_quality,
-                'school_j_quality': school_j_quality,
-                'school_i_distance': school_i_distance,
-                'school_j_distance': school_j_distance,
-                'chosen_option': chosen_option,
-                'option_0_chosen': int(chosen_option == 0),  # Both to school i
-                'option_1_chosen': int(chosen_option == 1),  # Both to school j
-                'option_2_chosen': int(chosen_option == 2),  # Split: sib1->i, sib2->j
-                'option_3_chosen': int(chosen_option == 3),  # Split: sib1->j, sib2->i
-            })
-    
-    return pd.DataFrame(data)
+    # Use real survey answers from 0_path.py
+    from path_config import SURVEY_FILE, BASE_PATH
+    print(f"Loading survey data from: {SURVEY_FILE}")
+    df = pd.read_csv(SURVEY_FILE)
 
-def create_covariates_matrix(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Create design matrix with covariates for estimation.
+    print("Applying cleaning steps...")
+    print(f"Initial observations: {len(df)}")
     
-    Args:
-        df: Raw survey data
-        
-    Returns:
-        pd.DataFrame: Design matrix with covariates
-    """
-    # Create dummy variables for categorical covariates
-    income_dummies = pd.get_dummies(df['income_category'], prefix='income')
-    education_dummies = pd.get_dummies(df['parent_education'], prefix='education')
+    # Drop if id_apoderado is empty
+    df = df[df['id_apoderado'].notna() & (df['id_apoderado'] != "")]
+    print(f"After dropping empty id_apoderado: {len(df)}")
     
-    # Combine with continuous variables (avoid duplication by selecting unique columns)
-    covariates = pd.concat([
-        df[['respondent_id', 'choice_id', 'household_size', 
-            'school_i_quality', 'school_j_quality', 
-            'school_i_distance', 'school_j_distance']],
-        income_dummies,
-        education_dummies
-    ], axis=1)
-    
-    return covariates
+    # Keep if sibl04_1 is not empty
+    if 'sibl04_1' in df.columns:
+        df = df[df['sibl04_1'].notna() & (df['sibl04_1'] != "")]
+        print(f"After keeping non-empty sibl04_1: {len(df)}")
 
-def save_processed_data(df: pd.DataFrame, covariates: pd.DataFrame) -> None:
+    # Merge id_mayor and id_menor from separate encoded files (deduplicate first)
+    SURVEY_MAYOR = BASE_PATH + 'encuesta/inputs/seccion_hermanos/dropdown_mayor_encoded.csv'
+    mayor_df = pd.read_csv(SURVEY_MAYOR, usecols=['id_apoderado', 'id_mayor'])
+    mayor_df = mayor_df.drop_duplicates(subset='id_apoderado')
+    df = df.merge(mayor_df, on='id_apoderado', how='left')
+
+    SURVEY_MENOR = BASE_PATH + 'encuesta/inputs/seccion_hermanos/dropdown_menor_encoded.csv'
+    menor_df = pd.read_csv(SURVEY_MENOR, usecols=['id_apoderado', 'id_menor'])
+    menor_df = menor_df.drop_duplicates(subset='id_apoderado')
+    df = df.merge(menor_df, on='id_apoderado', how='left')  
+
+    # Keep only relevant columns (include id_postulante and orden)
+    keep_cols = ['id_postulante', 'id_apoderado', 'orden', 'opcion_seleccionada', 'cant_common_rbd', 'id_mayor', 'id_menor','sibl04_1','sibl04_2','sibl05_menor','sibl05_mayor','sibl06_menos','sibl06_mas']
+    # Add any schjoint0* columns that hold rankings / school IDs
+    keep_cols += [col for col in df.columns if col.startswith('schjoint0')]
+    keep_cols += [col for col in df.columns if col.startswith('schmayor0')]
+    keep_cols += [col for col in df.columns if col.startswith('schmenor0')]
+
+    # Only keep columns that actually exist in the file to avoid KeyError
+    keep_cols = [c for c in keep_cols if c in df.columns]
+    df = df[keep_cols]
+
+    # If sibl04_1 contains tokens like 'schjoint01', replace with the actual school name/id
+    # Create a dedicated column with the resolved school identifier
+    if 'sibl04_1' in df.columns:
+        df['sibl04_1_name'] = ""
+        schjoint_cols = [c for c in df.columns if c.startswith('schjoint')]
+        for schcol in schjoint_cols:
+            # mark rows where sibl04_1 mentions this schcol (e.g., text contains 'schjoint01')
+            mask = df['sibl04_1'].astype(str).str.contains(schcol, na=False)
+            if mask.any():
+                df.loc[mask, 'sibl04_1_name'] = df.loc[mask, schcol].astype(str)
+
+    print(f"Final number of columns: {len(df.columns)}")
+    
+    return df
+
+    return df
+
+"""
+This function has been temporarily removed while we focus on survey data loading and cleaning.
+"""
+
+def save_processed_data(df: pd.DataFrame) -> None:
     """
     Save processed data to CSV files.
     
     Args:
         df: Survey response data
-        covariates: Covariate matrix
     """
     os.makedirs('data', exist_ok=True)
     
     # Save main dataset
     df.to_csv('data/survey_responses.csv', index=False)
     print(f"Saved survey responses: {len(df)} observations")
-    
-    # Save covariates
-    covariates.to_csv('data/covariates.csv', index=False)
-    print(f"Saved covariates matrix: {covariates.shape}")
-    
-    # Save summary statistics
-    summary_stats = df.describe()
-    summary_stats.to_csv('data/summary_statistics.csv')
-    print("Saved summary statistics")
 
 def main():
     """Main execution function."""
@@ -157,20 +128,14 @@ def main():
     print("\n1. Loading survey data...")
     survey_data = load_survey_data()
     
-    # Create covariates matrix
-    print("\n2. Creating covariates matrix...")
-    covariates = create_covariates_matrix(survey_data)
-    
     # Save processed data
-    print("\n3. Saving processed data...")
-    save_processed_data(survey_data, covariates)
+    print("\n2. Saving processed data...")
+    save_processed_data(survey_data)
     
     # Print data summary
-    print("\n4. Data Summary:")
+    print("\n3. Data Summary:")
     print(f"   - Total observations: {len(survey_data)}")
-    print(f"   - Unique respondents: {survey_data['respondent_id'].nunique()}")
-    print(f"   - Choices per respondent: {survey_data.groupby('respondent_id').size().mean():.1f}")
-    print(f"   - Covariate dimensions: {covariates.shape}")
+    print(f"   - Unique respondents: {survey_data['id_apoderado'].nunique()}")
     
     print("\n" + "=" * 60)
     print("Data loading completed successfully!")
@@ -178,3 +143,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+# %%
