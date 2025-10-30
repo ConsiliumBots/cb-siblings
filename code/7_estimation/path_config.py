@@ -3,6 +3,8 @@ import getpass
 # Set base path for survey data depending on user
 if getpass.getuser() == 'javieragazmuri':
     BASE_PATH = '/Users/javieragazmuri/Library/CloudStorage/Dropbox-ConsiliumBots/ConsiliumBots/Projects/Chile/ChileSAE/SAE 2023/'
+elif getpass.getuser() == 'tlarroucau':
+    BASE_PATH = '/home/tlarroucau/Dropbox/ConsiliumBots/Projects/Chile/ChileSAE/SAE 2023/'
 else:
     BASE_PATH = '/path/for/other/user/'  # Update as needed
 

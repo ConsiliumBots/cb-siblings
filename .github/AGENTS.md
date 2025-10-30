@@ -81,6 +81,16 @@ df.to_latex("output_table.tex", index=False)
 ## Working Effectively
 
 ### Environment Setup
+
+#### User-Specific Python/R Environment
+- **Tomas (@tlarroucau):**
+  - If Python or R code fails to run, activate Anaconda environment first:
+    ```bash
+    conda activate rconsole
+    ```
+  - This environment has all required packages and dependencies
+  - Use this before running any Python scripts or R code
+
 - **Python Setup (takes 3 minutes):**
   - `pip install pandas numpy matplotlib jupyter` -- takes ~3 minutes. NEVER CANCEL.
   - Additional packages available: `pip install plotly seaborn scikit-learn`
@@ -93,24 +103,37 @@ df.to_latex("output_table.tex", index=False)
 
 ### Project Structure
 ```
-0_main.do           # Stata configuration and paths (ENTRY POINT - sets all ${pathData} globals)
-1_feedback/         # Probability calculations and feedback analysis  
-2_surveys/          # Survey data processing
-3_analysis/         # Main analysis (regular and complementary periods)
-  ├── 1_regular_period/      # Regular admission cycle analysis
-  └── 2_complementary_period/ # Complementary admission cycle analysis
-4_reports/          # Generated reports for different audiences
-  ├── diagnostic/   # Exploratory and diagnostic reports
-  ├── mineduc/      # Reports for Chilean Ministry of Education
-  ├── preliminar/   # Early-stage findings
-  ├── surveys/      # Survey-specific reports
-  └── yale/         # Academic presentations
-5_paper/            # Academic paper production
-  ├── 1_clean/      # Data cleaning for paper
-  ├── 2_analysis/   # Final analysis for paper results
-  └── 3_simulations/ # Counterfactual simulations
-6_model/            # Model documentation and presentations
-7_estimation/       # Structural preference parameter estimation (Python)
+Root folders:
+├── code/              # All analysis code organized by stage
+├── data/              # Processed datasets (raw data in Dropbox)
+├── paper/             # LaTeX files and paper documents
+│   ├── documents/     # Paper drafts and LaTeX source
+│   └── model/         # Model documentation
+└── results/           # Generated outputs from analysis
+
+Code folder structure (code/):
+├── 0_main.do          # Stata paths configuration (if at root level)
+├── 1_feedback/        # Probability calculations and feedback analysis  
+├── 2_surveys/         # Survey data processing
+│   └── questionaries/ # Survey instruments (PDFs)
+├── 3_analysis/        # Main analysis (regular and complementary periods)
+│   ├── 1_regular_period/      # Regular admission cycle
+│   └── 2_complementary_period/ # Complementary admission cycle
+├── 4_reports/         # Generated reports for different audiences
+│   ├── diagnostic/    # Exploratory and diagnostic reports
+│   ├── mineduc/       # Reports for Ministry of Education
+│   ├── preliminar/    # Early-stage findings
+│   ├── surveys/       # Survey-specific reports
+│   └── yale/          # Academic presentations
+├── 5_paper/           # Academic paper production
+│   ├── 1_clean/       # Data cleaning for paper
+│   ├── 2_analysis/    # Final analysis for paper results
+│   └── 3_simulations/ # Counterfactual simulations
+├── 6_model/           # Model documentation and presentations
+└── 7_estimation/      # Structural preference estimation (Python)
+    ├── figures/       # Generated plots
+    ├── results/       # Parameter estimates and outputs
+    └── *.py           # Estimation scripts
 ```
 
 ### Code Quality Standards
@@ -122,23 +145,37 @@ df.to_latex("output_table.tex", index=False)
 - Test scripts incrementally rather than running entire pipelines
 
 ### Running Analysis
-- **Entry Point:** Start with `0_main.do` - sets global paths (${pathData}, ${pathData_survey}, etc.) and graph styles
-- **Workflow:** Numbered directories (0-7) represent sequential analysis stages
-- **Path Variables:** Always use globals from `0_main.do` - never hard-code file paths
+- **Entry Point:** Configure paths in Stata configuration file or Python path_config.py
+- **Workflow:** Numbered directories (1-7) in `code/` folder represent sequential analysis stages
+- **Path Variables:** Always use path variables - never hard-code file paths
 - **Key Stata Files:**
-  - Data cleaning: `1_feedback/preliminar/1_cleaning_for_probabilities.do`
-  - Analysis: `3_analysis/1_regular_period/1_preliminar_analysis.do`
-  - Paper results: `5_paper/2_analysis/*.do`
+  - Data cleaning: `code/1_feedback/preliminar/1_cleaning_for_probabilities.do`
+  - Analysis: `code/3_analysis/1_regular_period/1_preliminar_analysis.do`
+  - Paper results: `code/5_paper/2_analysis/*.do`
 - **Key Python Files:**
-  - Probability calculations: `1_feedback/preliminar/2_probabilities.ipynb`
-  - Simulations: `3_analysis/1_regular_period/2_simulations/3_simulations.py`
-  - Preference estimation: `7_estimation/3_estimation.py`
+  - Probability calculations: `code/1_feedback/preliminar/2_probabilities.ipynb`
+  - Simulations: `code/3_analysis/1_regular_period/2_simulations/3_simulations.py`
+  - Preference estimation: `code/7_estimation/3_estimation.py`
 
 ### Data Access Patterns
 **Always load data from source files:**
 ```stata
 * Stata pattern
 use "${pathData}/applications_2023.dta", clear
+import delimited "${pathData_survey}/responses.csv", clear
+```
+
+```python
+# Python pattern
+import pandas as pd
+
+# Use path variables from path_config.py
+from path_config import BASE_PATH
+df = pd.read_csv(f"{BASE_PATH}/encuesta/responses.csv")
+
+# For local processed data
+df = pd.read_csv("../../data/survey_responses.csv")
+```
 import delimited "${pathData_survey}/responses.csv", clear
 ```
 
