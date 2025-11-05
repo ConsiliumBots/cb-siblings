@@ -206,5 +206,5 @@
         rename (qual dist_km)(qual_bos_young dist_km_bos_young)
         rename school_name sibl05_menor_name
 
-    export delimited "$pathGit/7_estimation/data/survey_responses.csv", replace
+    export delimited "$pathGit/data/survey_responses.csv", replace
 
