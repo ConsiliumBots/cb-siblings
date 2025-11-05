@@ -163,7 +163,7 @@
 
         merge 1:1 id_apoderado id_menor school_name using `applications_menor', keep(1 3) nogen // all merge
         rename (qual dist_km)(qual_bj_young dist_km_bj_young)
-        rename school_name sibl04_1_name
+        rename school_name bj
 
     // WJ
 
@@ -180,7 +180,7 @@
         tab _merge if sibl04_2 != "" // all matched 
         drop _merge 
         rename (qual dist_km)(qual_wj_young dist_km_wj_young)
-        rename school_name sibl04_2_name
+        rename school_name wj
 
     // BOS
 
@@ -192,7 +192,7 @@
         tab _merge if sibl05_mayor != "" // 6% not matched
         drop _merge
         rename (qual dist_km)(qual_bos_old dist_km_bos_old)
-        rename school_name sibl05_mayor_name
+        rename school_name bos
 
     // BYS
 
@@ -204,7 +204,7 @@
         tab _merge if sibl05_menor != "" // 6% not matched
         drop _merge 
         rename (qual dist_km)(qual_bos_young dist_km_bos_young)
-        rename school_name sibl05_menor_name
+        rename school_name bys
 
     export delimited "$pathGit/data/survey_responses.csv", replace
 
