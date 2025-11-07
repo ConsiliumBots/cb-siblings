@@ -70,12 +70,12 @@ class ExplodedSiblingLogit:
         choices = np.zeros((self.n_obs, 2))  # [chose_split, chose_joint]
         
         # Multiple common schools case
-        is_joint_multi = self.data.loc[self.multi_common, 'sibl06_menos'].fillna('').str.startswith('Ambos')
+        is_joint_multi = self.data.loc[self.multi_common, 'worstjoint_vs_split'].fillna('').str.startswith('Ambos')
         choices[self.multi_common, 0] = ~is_joint_multi
         choices[self.multi_common, 1] = is_joint_multi
         
         # Single common school case
-        is_joint_single = self.data.loc[self.single_common, 'sibl06_mas'].fillna('').str.startswith('Ambos')
+        is_joint_single = self.data.loc[self.single_common, 'joint_vs_split'].fillna('').str.startswith('Ambos')
         choices[self.single_common, 0] = ~is_joint_single
         choices[self.single_common, 1] = is_joint_single
         
