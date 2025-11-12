@@ -10,7 +10,7 @@
 *.dta
 
 # CSV data files (raw data, not generated results)
-**/data/*.csv
+# **/data/*.csv
 
 # Excel data files
 *.xlsx
