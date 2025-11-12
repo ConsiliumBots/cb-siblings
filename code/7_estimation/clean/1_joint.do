@@ -236,11 +236,38 @@
         rename school_name bys
 
 // ----------------------------------------------------------------
-// Export
+// Export survey file
 // ----------------------------------------------------------------
 
     rename sibl06_mas joint_vs_split
     rename sibl06_menos worstjoint_vs_split
-    drop sibl* schmayor* schmenor* schjoint*
-    export delimited "$pathGit/data/survey_responses.csv", replace
 
+    preserve 
+        drop sibl* schmayor* schmenor* schjoint*
+        export delimited "$pathGit/data/survey_responses.csv", replace
+    restore
+
+// ----------------------------------------------------------------
+// Data for joint applications with covariates
+// ----------------------------------------------------------------
+
+    keep id* schjoint*
+    rename schjoint0* schjoint*
+    reshape long schjoint, i(id_apoderado) j(orden)
+    rename schjoint school_name
+    drop if school_name == ""
+
+    replace school_name = lower(school_name)
+    replace school_name = subinstr(school_name, "_", " ", .)
+
+    merge 1:1 id_apoderado id_menor school_name using `applications_menor', keep(1 3) nogen // all merge
+
+    foreach var in $key_vars {
+        rename `var' `var'_young
+    }
+    merge 1:1 id_apoderado id_mayor school_name using `applications_mayor', keep(1 3) nogen // all merge
+    foreach var in $key_vars {
+        rename `var' `var'_old
+    }
+
+    export delimited "$pathGit/data/joint_applications.csv", replace
