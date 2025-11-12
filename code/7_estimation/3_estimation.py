@@ -18,11 +18,25 @@ from typing import Dict, Tuple, Any, List
 
 import sys
 sys.path.append(os.path.dirname(__file__))
-from likelihood_functions import ExplodedSiblingLogit
+from likelihood_functions import ExplodedSiblingLogit, ExtendedSiblingLogit
 
 class PreferenceEstimator:
-    def __init__(self, data):
-        self.likelihood = ExplodedSiblingLogit(data)
+    def __init__(self, data, marginal_older=None, marginal_younger=None, use_marginals=True):
+        """
+        Initialize estimator with joint and optional marginal data.
+        
+        Args:
+            data: Survey response data (joint vs split scenarios)
+            marginal_older: Marginal applications for older sibling (optional)
+            marginal_younger: Marginal applications for younger sibling (optional)
+            use_marginals: If True and marginal data provided, use ExtendedSiblingLogit
+        """
+        if use_marginals and marginal_older is not None and marginal_younger is not None:
+            self.likelihood = ExtendedSiblingLogit(data, marginal_older, marginal_younger)
+            self.model_type = "Extended (with marginals)"
+        else:
+            self.likelihood = ExplodedSiblingLogit(data)
+            self.model_type = "Basic (joint vs split only)"
         # New parameterization: [beta_y_q, beta_y_d, beta_o_q, beta_o_d, omega_y, gamma]
         self.param_names = [
             "beta_y_q", "beta_y_d", "beta_o_q", "beta_o_d", "omega_y", "gamma"
@@ -139,18 +153,24 @@ class PreferenceEstimator:
             return
         est = self.results["x"]
         results_dict: Dict[str, Any] = {
+            "model_type": self.model_type,
             "params": {name: float(val) for name, val in zip(self.param_names, est)},
             "log_likelihood": float(-self.results["fun"]),
             "success": bool(self.results["success"]),
             "n_obs": int(self.likelihood.n_obs)
         }
         
-        os.makedirs("results", exist_ok=True)
-        with open("results/estimation_results.json", "w") as f:
+        # Save to results directory relative to script location
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        results_dir = os.path.join(script_dir, "results")
+        os.makedirs(results_dir, exist_ok=True)
+        
+        results_file = os.path.join(results_dir, "estimation_results.json")
+        with open(results_file, "w") as f:
             json.dump(results_dict, f, indent=4)
         
         # Also export a simple LaTeX table with parameter estimates
-        tex_path = os.path.join("results", "estimation_results.tex")
+        tex_path = os.path.join(results_dir, "estimation_results.tex")
         try:
             with open(tex_path, "w") as tf:
                 tf.write("% Auto-generated LaTeX table of estimation results\n")
@@ -172,14 +192,33 @@ def main():
     print("PREFERENCE ESTIMATION")
     print("=" * 60)
     
+    # Load data
     try:
         data = pd.read_csv("data/survey_responses.csv")
-        print(f"Loaded {len(data)} observations")
+        print(f"Loaded joint data: {len(data)} observations")
     except FileNotFoundError:
-        print("Please run 1_load_data.py first.")
+        print("Error: data/survey_responses.csv not found")
         return
     
-    estimator = PreferenceEstimator(data)
+    # Try to load marginal data
+    try:
+        marginal_older = pd.read_csv("data/marginal_applications_older.csv")
+        marginal_younger = pd.read_csv("data/marginal_applications_younger.csv")
+        print(f"Loaded marginal data:")
+        print(f"  - Older sibling: {len(marginal_older)} school choices")
+        print(f"  - Younger sibling: {len(marginal_younger)} school choices")
+        use_marginals = True
+    except FileNotFoundError:
+        print("Warning: Marginal data not found, using joint vs split only")
+        marginal_older = None
+        marginal_younger = None
+        use_marginals = False
+    
+    # Initialize estimator
+    estimator = PreferenceEstimator(data, marginal_older, marginal_younger, use_marginals)
+    print(f"\nModel type: {estimator.model_type}")
+    
+    # Run estimation
     results = estimator.estimate()
     
     if results is not None and results["success"]:

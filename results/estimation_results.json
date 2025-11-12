@@ -1,6 +1,14 @@
 {
-    "together_bonus": -0.1943359375000006,
-    "log_likelihood": -8892.707952114375,
+    "model_type": "Extended (with marginals)",
+    "params": {
+        "beta_y_q": 0.2623809701881692,
+        "beta_y_d": -0.00801987050859091,
+        "beta_o_q": 0.23689599553916954,
+        "beta_o_d": -0.002141090357901012,
+        "omega_y": 0.4110506862341228,
+        "gamma": -0.18434674387680253
+    },
+    "log_likelihood": -33497.76474123811,
     "success": true,
-    "n_obs": 12917
+    "n_obs": 9231
 }
