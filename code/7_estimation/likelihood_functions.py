@@ -4,6 +4,13 @@ Exploded Logit Model for Sibling School Assignment Preferences (CB-Siblings Proj
 Implements an exploded logit model to analyze family preferences over joint vs split
 school allocations for siblings, using partial ranking data from Chilean SAE surveys.
 
+This module includes:
+1. Joint vs Split likelihood (comparing joint and split allocations)
+2. Marginal ranking likelihoods for each sibling (individual school rankings)
+
+The full likelihood is the product of these three components, assuming independence
+conditional on type.
+
 Ranking variables used:
 - sibl04_1: Top preferred school (both assigned together)
 - sibl04_2: Least preferred school (both assigned together)
@@ -11,20 +18,18 @@ Ranking variables used:
 - sibl06_menos: Choice between split vs worst joint allocation
 - sibl06_mas: Choice between best joint vs split allocation (only one school applied in common)
 
-Author: Javiera Gazmuri
-Date: Oct 2025
+Marginal application data:
+- marginal_applications_older.csv: Complete application rankings for older sibling
+- marginal_applications_younger.csv: Complete application rankings for younger sibling
 
-NOTAS:
-2) Falta meter el resto de las desigualdades:
-- Marginales
-- Joint
-Likelihood: Usar exploded logit para cada uno, y los multiplicamos (dado independencia) x likelihood de split vs joint
+Author: Javiera Gazmuri
+Date: Oct 2025 - Nov 2025
 """
 
 import numpy as np
 import pandas as pd
 from scipy import optimize
-from typing import Tuple, Dict, List, Any
+from typing import Tuple, Dict, List, Any, Optional
 
 class ExplodedSiblingLogit:
     """
@@ -366,25 +371,237 @@ def test_likelihood_function(data: pd.DataFrame):
     
     print("\nExploded logit test completed successfully!")
 
+class ExtendedSiblingLogit(ExplodedSiblingLogit):
+    """
+    Extended exploded logit model that includes:
+    1. Joint vs Split likelihood (from ExplodedSiblingLogit)
+    2. Younger sibling marginal ranking likelihood
+    3. Older sibling marginal ranking likelihood
+    
+    The full likelihood is the product: L = L_joint_split × L_younger × L_older
+    
+    Assumes independence of marginals conditional on type, following Type-I 
+    Extreme Value distribution for idiosyncratic shocks.
+    """
+    
+    def __init__(self, 
+                 joint_data: pd.DataFrame,
+                 marginal_older: pd.DataFrame,
+                 marginal_younger: pd.DataFrame):
+        """
+        Initialize extended model with joint and marginal data.
+        
+        Args:
+            joint_data: Survey response data (joint vs split scenarios)
+            marginal_older: Complete application rankings for older sibling
+            marginal_younger: Complete application rankings for younger sibling
+        """
+        # Initialize parent class with joint data
+        super().__init__(joint_data)
+        
+        # Store marginal data
+        self.marginal_older = marginal_older.copy()
+        self.marginal_younger = marginal_younger.copy()
+        
+        # Prepare marginal data for likelihood calculation
+        self._prepare_marginal_data()
+        
+        print(f"Extended likelihood initialized:")
+        print(f"  - Joint vs split: {self.n_obs} observations")
+        print(f"  - Older marginal: {len(self.marginal_older)} school choices")
+        print(f"  - Younger marginal: {len(self.marginal_younger)} school choices")
+    
+    def _prepare_marginal_data(self) -> None:
+        """
+        Prepare marginal application data for likelihood calculation.
+        
+        For each family, we need:
+        - Complete ranking (orden) for all schools
+        - Covariates (quality, distance) for each school
+        """
+        # Ensure orden is numeric
+        self.marginal_older['orden'] = pd.to_numeric(self.marginal_older['orden'], errors='coerce')
+        self.marginal_younger['orden'] = pd.to_numeric(self.marginal_younger['orden'], errors='coerce')
+        
+        # Treat quality == 0 as missing
+        for df in [self.marginal_older, self.marginal_younger]:
+            df['qual'] = df['qual'].replace(0, np.nan)
+            # Impute with mean
+            df['qual'] = df['qual'].fillna(df['qual'].mean())
+            df['dist_km'] = df['dist_km'].fillna(df['dist_km'].mean())
+        
+        # Sort by family and orden to ensure correct ranking order
+        self.marginal_older = self.marginal_older.sort_values(['id_apoderado', 'orden'])
+        self.marginal_younger = self.marginal_younger.sort_values(['id_apoderado', 'orden'])
+    
+    def _marginal_log_likelihood(self, 
+                                  params: np.ndarray,
+                                  marginal_data: pd.DataFrame,
+                                  sibling_type: str) -> float:
+        """
+        Calculate log-likelihood for one sibling's marginal rankings.
+        
+        Uses exploded logit: P(ranking) = exp(V_ranked) / sum(exp(V_j)) for j in choice set
+        
+        Args:
+            params: [beta_y_q, beta_y_d, beta_o_q, beta_o_d, omega_y, gamma]
+            marginal_data: DataFrame with columns [id_apoderado, school_name, orden, qual, dist_km]
+            sibling_type: 'younger' or 'older'
+            
+        Returns:
+            float: Log-likelihood contribution from this sibling's marginal rankings
+        """
+        if sibling_type == 'younger':
+            beta_q, beta_d = params[0], params[1]  # beta_y_q, beta_y_d
+        else:  # older
+            beta_q, beta_d = params[2], params[3]  # beta_o_q, beta_o_d
+        
+        total_ll = 0.0
+        
+        # Group by family (id_apoderado)
+        for family_id, family_data in marginal_data.groupby('id_apoderado'):
+            # Get covariates for all schools in this family's choice set
+            qualities = family_data['qual'].values
+            distances = family_data['dist_km'].values
+            ordenes = family_data['orden'].values
+            
+            # Skip if missing data
+            if len(qualities) == 0:
+                continue
+            
+            # Compute utilities: V_j = beta_q * quality_j + beta_d * distance_j
+            utilities = beta_q * qualities + beta_d * distances
+            
+            # For exploded logit, we need the probability of the observed ranking
+            # The first choice is the school with orden==1 (highest ranked)
+            # P(school with orden=1) = exp(V_1) / sum_j exp(V_j)
+            
+            # Find the school that was ranked first (orden == min(orden))
+            first_choice_idx = np.argmin(ordenes)
+            
+            # Numerically stable softmax
+            max_util = np.max(utilities)
+            exp_utils = np.exp(utilities - max_util)
+            sum_exp = np.sum(exp_utils)
+            
+            # Probability of choosing the first-ranked school
+            prob_first = exp_utils[first_choice_idx] / sum_exp
+            prob_first = np.clip(prob_first, 1e-10, 1-1e-10)
+            
+            # Add to log-likelihood
+            total_ll += np.log(prob_first)
+        
+        return total_ll
+    
+    def log_likelihood(self, params: np.ndarray) -> float:
+        """
+        Calculate full log-likelihood: joint_split × younger × older.
+        
+        Args:
+            params: Parameter vector [beta_y_q, beta_y_d, beta_o_q, beta_o_d, omega_y, gamma]
+            
+        Returns:
+            float: Total log-likelihood value
+        """
+        try:
+            # 1. Joint vs split likelihood (from parent class)
+            ll_joint_split = super().log_likelihood(params)
+            
+            # 2. Younger sibling marginal likelihood
+            ll_younger = self._marginal_log_likelihood(params, self.marginal_younger, 'younger')
+            
+            # 3. Older sibling marginal likelihood
+            ll_older = self._marginal_log_likelihood(params, self.marginal_older, 'older')
+            
+            # Total log-likelihood (sum in log space = product in probability space)
+            total_ll = ll_joint_split + ll_younger + ll_older
+            
+            # Check for numerical issues
+            if np.isnan(total_ll) or np.isinf(total_ll):
+                print(f"Invalid total log-likelihood: {total_ll}")
+                print(f"  Joint-split: {ll_joint_split}, Younger: {ll_younger}, Older: {ll_older}")
+                return -1e10
+            
+            return total_ll
+            
+        except Exception as e:
+            print(f"Error in extended log_likelihood calculation: {e}")
+            return -1e10
+
+
+def test_extended_likelihood(joint_data: pd.DataFrame,
+                             marginal_older: pd.DataFrame,
+                             marginal_younger: pd.DataFrame):
+    """
+    Test the extended likelihood with marginal rankings.
+    
+    Args:
+        joint_data: Survey response data
+        marginal_older: Marginal applications for older sibling
+        marginal_younger: Marginal applications for younger sibling
+    """
+    print("=" * 60)
+    print("TESTING EXTENDED LIKELIHOOD WITH MARGINAL RANKINGS")
+    print("=" * 60)
+    
+    # Initialize extended likelihood
+    likelihood = ExtendedSiblingLogit(joint_data, marginal_older, marginal_younger)
+    
+    # Test with example parameters
+    test_params = np.array([1.0, -0.1, 1.0, -0.1, 0.5, 0.8])
+    
+    print(f"\nTesting with parameters:")
+    print("Test params (beta_y_q, beta_y_d, beta_o_q, beta_o_d, omega_y, gamma):", test_params)
+    
+    try:
+        # Calculate each component
+        ll_joint_split = ExplodedSiblingLogit.log_likelihood(likelihood, test_params)
+        ll_younger = likelihood._marginal_log_likelihood(test_params, marginal_younger, 'younger')
+        ll_older = likelihood._marginal_log_likelihood(test_params, marginal_older, 'older')
+        ll_total = likelihood.log_likelihood(test_params)
+        
+        print(f"\nLog-likelihood components:")
+        print(f"  Joint vs split: {ll_joint_split:.4f}")
+        print(f"  Younger marginal: {ll_younger:.4f}")
+        print(f"  Older marginal: {ll_older:.4f}")
+        print(f"  Total: {ll_total:.4f}")
+        print(f"  Sum check: {ll_joint_split + ll_younger + ll_older:.4f}")
+        
+    except Exception as e:
+        print(f"Error in calculation: {e}")
+        return
+    
+    print("\nExtended likelihood test completed successfully!")
+
+
 def main():
     """Main execution function."""
     print("=" * 60)
-    print("PREFERENCE ESTIMATION: Exploded Logit Model")
+    print("PREFERENCE ESTIMATION: Extended Exploded Logit Model")
     print("=" * 60)
     
     # Load and check data
     try:
-        data = pd.read_csv('data/survey_responses.csv')
-        test_likelihood_function(data)
-    except FileNotFoundError:
-        print("Data files not found. Please run 1_load_data.py first.")
+        joint_data = pd.read_csv('data/survey_responses.csv')
+        marginal_older = pd.read_csv('data/marginal_applications_older.csv')
+        marginal_younger = pd.read_csv('data/marginal_applications_younger.csv')
+        
+        print("\nTesting basic likelihood (joint vs split only):")
+        test_likelihood_function(joint_data)
+        
+        print("\n" + "=" * 60)
+        print("Testing extended likelihood (with marginals):")
+        test_extended_likelihood(joint_data, marginal_older, marginal_younger)
+        
+    except FileNotFoundError as e:
+        print(f"Data files not found: {e}")
         return
     except Exception as e:
         print(f"Error testing likelihood function: {e}")
         return
     
     print("\n" + "=" * 60)
-    print("Exploded logit model ready for estimation!")
+    print("Extended exploded logit model ready for estimation!")
     print("=" * 60)
 
 if __name__ == "__main__":

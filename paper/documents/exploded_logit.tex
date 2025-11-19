@@ -93,16 +93,71 @@ The probability that family $i$ prefers being assigned together is,
     P_i \equiv \Pr \left[ V_i^J + \varepsilon_{ijj} > V_i^S + \varepsilon_{ilk}  \right] = \frac{\exp\left(V_i^J\right)}{\exp\left(V_i^J\right) + \exp\left(V_i^S\right)}
 \end{align*}
 
-\subsection{Log-likelihood}
+\subsection{Log-likelihood: Joint vs Split}
 Let \(y_i \in \{0,1 \} \) be the observed answer (1 is prefer joint, 0 is prefer split),
 \[
-L_i (\theta) = P_i^{y_i} (1-P_i)^{1-y_i} \quad, \theta = (\beta_y,\beta_o,\delta_y,\delta_o,\omega_y, \gamma)
+L_i^{JS} (\theta) = P_i^{y_i} (1-P_i)^{1-y_i} \quad, \theta = (\beta_y,\beta_o,\delta_y,\delta_o,\omega_y, \gamma)
 \]
 Assuming independent families \(i = 1,...,N\)
 \begin{align*}
-    \mathcal{L}(\theta) &= \prod^N_{i=1}L_i(\theta) \\
-    \ell(\theta) &= \sum_{i=1}^N y_i \log P_i + (1-y_i) \log (1-P_i)
+    \mathcal{L}^{JS}(\theta) &= \prod^N_{i=1}L_i^{JS}(\theta) \\
+    \ell^{JS}(\theta) &= \sum_{i=1}^N y_i \log P_i + (1-y_i) \log (1-P_i)
 \end{align*}
+
+\subsection{Marginal Likelihoods}
+
+We extend the model to include marginal ranking information for each sibling. Let $\mathcal{J}_i^y$ and $\mathcal{J}_i^o$ denote the choice sets (schools applied to) for the younger and older siblings in family $i$, respectively.
+
+\subsubsection{Younger Sibling Marginal}
+
+For the younger sibling's marginal ranking, let $j^*_i \in \mathcal{J}_i^y$ denote the first-choice school (orden = 1). The probability of this choice follows the exploded logit form:
+
+\[
+P_i^y(j^*_i) = \frac{\exp(u_{y_i j^*_i})}{\sum_{j \in \mathcal{J}_i^y} \exp(u_{y_i j})}
+\]
+
+where $u_{y_i j} = \beta_y dist_{y_i j} + \delta_y quality_j$ is the utility of school $j$ for the younger sibling.
+
+The marginal log-likelihood contribution from the younger sibling in family $i$ is:
+\[
+\ell_i^y(\theta) = \log P_i^y(j^*_i)
+\]
+
+\subsubsection{Older Sibling Marginal}
+
+Similarly, for the older sibling with first-choice school $k^*_i \in \mathcal{J}_i^o$:
+
+\[
+P_i^o(k^*_i) = \frac{\exp(u_{o_i k^*_i})}{\sum_{k \in \mathcal{J}_i^o} \exp(u_{o_i k})}
+\]
+
+where $u_{o_i k} = \beta_o dist_{o_i k} + \delta_o quality_k$.
+
+The marginal log-likelihood contribution is:
+\[
+\ell_i^o(\theta) = \log P_i^o(k^*_i)
+\]
+
+\subsection{Full Log-likelihood}
+
+Assuming independence of the marginal choices conditional on type (with Type-I Extreme Value idiosyncratic shocks), the full likelihood for family $i$ is:
+
+\[
+L_i(\theta) = L_i^{JS}(\theta) \times L_i^{y}(\theta) \times L_i^{o}(\theta)
+\]
+
+In log-likelihood form across all $N$ families:
+\begin{align*}
+    \ell(\theta) &= \sum_{i=1}^N \left[ \ell_i^{JS}(\theta) + \ell_i^y(\theta) + \ell_i^o(\theta) \right] \\
+    &= \ell^{JS}(\theta) + \sum_{i=1}^N \ell_i^y(\theta) + \sum_{i=1}^N \ell_i^o(\theta)
+\end{align*}
+
+\textbf{Implementation note:} The extended model uses three data sources:
+\begin{itemize}
+    \item \texttt{survey\_responses.csv}: Joint vs split scenarios (BJ, WJ, BOS, BYS)
+    \item \texttt{marginal\_applications\_older.csv}: Complete rankings for older sibling
+    \item \texttt{marginal\_applications\_younger.csv}: Complete rankings for younger sibling
+\end{itemize}
 
 \section{Data}
 
