@@ -99,7 +99,7 @@
     geodist lat_younger lon_younger sch_lat sch_lon, gen(dist_km)
     
     // Clean up
-    drop lat_younger lon_younger sch_lat sch_lon
+    drop lat_younger lon_younger sch_lat sch_lon id_mayor
     rename quality_category qual
     
     // Export
@@ -120,7 +120,7 @@
     geodist lat_older lon_older sch_lat sch_lon, gen(dist_km)
     
     // Clean up
-    drop lat_older lon_older sch_lat sch_lon
+    drop lat_older lon_older sch_lat sch_lon id_menor
     rename quality_category qual
     
     // Export

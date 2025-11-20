@@ -165,3 +165,4 @@ Desktop.ini
 # Keep README files
 !**/README.md
 !**/README.txt
+data/all_programs_*.csv
