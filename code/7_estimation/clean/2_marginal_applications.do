@@ -17,6 +17,7 @@
 		global main_silings =  "/Users/javieragazmuri/ConsiliumBots Dropbox/ConsiliumBots/Projects/Chile/Siblings"
 		global main_sae =  "/Users/javieragazmuri/Library/CloudStorage/Dropbox-ConsiliumBots/ConsiliumBots/Projects/Chile/ChileSAE/SAE 2023"
 	    global pathGit = "/Users/javieragazmuri/Documents/GitHub/cb-siblings"
+		global pathData = "/Users/javieragazmuri/Library/CloudStorage/Dropbox-Personal/Siblings/data"
 
 	}
 
@@ -68,7 +69,7 @@
 // ----------------------------------------------------------------
 
     preserve 
-        import delimited "$pathGit/data/survey_responses.csv", clear
+        import delimited "$pathData/survey_responses.csv", clear
         keep id_apoderado id_mayor id_menor
         tempfile survey_ids
         save `survey_ids', replace
@@ -78,11 +79,11 @@
     merge m:1 id_apoderado id_mayor using `survey_ids', keep(2 3) nogen // all merge
     drop id_menor 
 
-    export delimited "$pathGit/data/marginal_applications_older.csv", replace
+    export delimited "$pathData/marginal_applications_older.csv", replace
 
     use `applications_marginal', clear
     rename id_postulante id_menor
     merge m:1 id_apoderado id_menor using `survey_ids', keep(2 3) nogen // all merge
     drop id_mayor
 
-    export delimited "$pathGit/data/marginal_applications_younger.csv", replace
+    export delimited "$pathData/marginal_applications_younger.csv", replace

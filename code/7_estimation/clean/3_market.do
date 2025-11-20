@@ -17,6 +17,7 @@
 		global main_silings =  "/Users/javieragazmuri/ConsiliumBots Dropbox/ConsiliumBots/Projects/Chile/Siblings"
 		global main_sae =  "/Users/javieragazmuri/Library/CloudStorage/Dropbox-ConsiliumBots/ConsiliumBots/Projects/Chile/ChileSAE/SAE 2023"
 	    global pathGit = "/Users/javieragazmuri/Documents/GitHub/cb-siblings"
+		global pathData = "/Users/javieragazmuri/Library/CloudStorage/Dropbox-Personal/Siblings/data"
 
 	}
 
@@ -46,7 +47,7 @@
     save `all_programs', replace
     
     // Load sibling IDs and locations
-    import delimited "$pathGit/data/survey_responses.csv", clear
+    import delimited "$pathData/survey_responses.csv", clear
     keep id_apoderado id_mayor id_menor
     
     tempfile sibling_ids
@@ -103,7 +104,7 @@
     rename quality_category qual
     
     // Export
-    export delimited "$pathGit/data/all_programs_younger.csv", replace
+    export delimited "$pathData/all_programs_younger.csv", replace
     
     // ----------------------------------------------------------------
     // All programs for OLDER sibling
@@ -124,5 +125,5 @@
     rename quality_category qual
     
     // Export
-    export delimited "$pathGit/data/all_programs_older.csv", replace
+    export delimited "$pathData/all_programs_older.csv", replace
 

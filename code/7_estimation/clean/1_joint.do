@@ -17,6 +17,7 @@
 		global main_silings =  "/Users/javieragazmuri/ConsiliumBots Dropbox/ConsiliumBots/Projects/Chile/Siblings"
 		global main_sae =  "/Users/javieragazmuri/Library/CloudStorage/Dropbox-ConsiliumBots/ConsiliumBots/Projects/Chile/ChileSAE/SAE 2023"
 	    global pathGit = "/Users/javieragazmuri/Documents/GitHub/cb-siblings"
+		global pathData = "/Users/javieragazmuri/Library/CloudStorage/Dropbox-Personal/Siblings/data"
 
 	}
 
@@ -244,7 +245,7 @@
 
     preserve 
         drop sibl* schmayor* schmenor* schjoint*
-        export delimited "$pathGit/data/survey_responses.csv", replace
+        export delimited "$pathData/survey_responses.csv", replace
     restore
 
 // ----------------------------------------------------------------
@@ -270,4 +271,4 @@
         rename `var' `var'_old
     }
 
-    export delimited "$pathGit/data/joint_applications.csv", replace
+    export delimited "$pathData/joint_applications.csv", replace
